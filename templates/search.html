@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Advanced Search – SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Advanced Search</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">Search</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Search Form -->
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg">
+                <div class="card-body p-5">
+                    <form method="POST" action="{{ url_for('main.search') }}" id="searchForm">
+                        {{ form.hidden_tag() }}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="searchQuery" name="{{ form.query.name }}" placeholder="Search term" value="{{ form.query.data or '' }}" required>
+                                    <label for="searchQuery"><i class="fas fa-search me-2"></i>Search Query</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <select class="form-select" id="searchType" name="{{ form.search_type.name }}">
+                                        <option value="suspect" {% if form.search_type.data == 'suspect' %}selected{% endif %}>Suspects</option>
+                                        <option value="case" {% if form.search_type.data == 'case' %}selected{% endif %}>Cases</option>
+                                    </select>
+                                    <label for="searchType">Search Type</label>
+                                </div>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100 py-3">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    {% if form.is_submitted() %}
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="mb-4">Search Results for "{{ form.query.data }}"</h3>
+            {% if results %}
+                <div class="row g-4">
+                    {% for item in results %}
+                        {% if search_type == 'suspect' %}
+                            <!-- Suspect Card -->
+                            <div class="col-lg-6 col-md-12">
+                                <div class="card h-100 border-0 shadow-sm hover-lift">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                                                <i class="fas fa-user-secret fa-2x text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="mb-1">{{ item.full_name }}</h5>
+                                                <span class="badge bg-secondary">{{ item.id_number }}</span>
+                                            </div>
+                                        </div>
+                                        <p class="card-text text-muted small">
+                                            <i class="fas fa-venus-mars me-1"></i> {{ item.gender|title if item.gender else 'Unknown' }}
+                                            {% if item.date_of_birth %}
+                                            <i class="fas fa-birthday-cake ms-3 me-1"></i> {{ item.date_of_birth.strftime('%Y-%m-%d') }}
+                                            {% endif %}
+                                            <span class="ms-3"><i class="fas fa-folder-open me-1"></i> {{ item.active_cases }} active case(s)</span>
+                                        </p>
+                                        <a href="{{ url_for('suspects.view_suspect', suspect_id=item.id) }}" class="btn btn-outline-primary btn-sm">View Profile</a>
+                                        <a href="{{ url_for('cases.create_case') }}?suspect_id={{ item.id }}" class="btn btn-primary btn-sm">New Case</a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <!-- Case Card -->
+                            <div class="col-lg-6 col-md-12">
+                                <div class="card h-100 border-0 shadow-sm hover-lift">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h5 class="card-title mb-0">{{ item.case_number }}</h5>
+                                            <span class="status-badge status-{{ item.status }}">{{ item.status.replace('_', ' ')|title }}</span>
+                                        </div>
+                                        <h6 class="card-subtitle mb-2 text-primary">{{ item.title }}</h6>
+                                        <p class="card-text text-muted small">{{ item.description|truncate(100) }}</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small><i class="fas fa-user-shield me-1"></i>{{ item.assigned_officer.full_name }}</small>
+                                            <small><i class="fas fa-calendar me-1"></i>{{ item.incident_date.strftime('%Y-%m-%d') if item.incident_date else 'N/A' }}</small>
+                                        </div>
+                                        <a href="{{ url_for('cases.view_case', case_id=item.id) }}" class="btn btn-outline-primary btn-sm mt-3">View Case</a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">No results found.</div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.hover-lift {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hover-lift:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1) !important;
+}
+.status-badge {
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.status-open { background: #e3f2fd; color: #1565c0; }
+.status-investigating { background: #fff3e0; color: #e65100; }
+.status-in_court { background: #f3e5f5; color: #7b1fa2; }
+.status-closed { background: #e8f5e9; color: #2e7d32; }
+.status-archived { background: #eceff1; color: #455a64; }
+</style>
+{% endblock %}

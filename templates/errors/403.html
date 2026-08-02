@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}403 – Access Denied | SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Access Denied</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">403</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+            <!-- Error Icon -->
+            <div class="mb-5">
+                <div class="error-icon-wrapper d-inline-block position-relative">
+                    <div class="error-icon-bg bg-warning-subtle rounded-circle p-5">
+                        <i class="fas fa-lock fa-5x text-warning"></i>
+                    </div>
+                    <span class="position-absolute top-0 start-100 translate-middle badge bg-danger rounded-pill px-3 py-2">
+                        <i class="fas fa-exclamation-triangle me-1"></i> 403
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Error Message -->
+            <h1 class="display-4 fw-bold text-primary mb-3">
+                <i class="fas fa-ban me-2 text-danger"></i>Access Denied
+            </h1>
+            <p class="lead text-muted mb-4">
+                You don't have permission to access this page. This area is restricted to authorized SAPS personnel.
+            </p>
+            
+            <!-- Error Details -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                                <i class="fas fa-user-shield text-primary me-3 fa-lg"></i>
+                                <div>
+                                    <div class="small text-muted">Your Role</div>
+                                    <div class="fw-semibold">{{ current_user.role|title if current_user.is_authenticated else 'Not Logged In' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                                <i class="fas fa-fingerprint text-primary me-3 fa-lg"></i>
+                                <div>
+                                    <div class="small text-muted">Access Level</div>
+                                    <div class="fw-semibold">Insufficient Privileges</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                <a href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('main.index') }}" 
+                   class="btn btn-saps btn-lg px-5">
+                    <i class="fas fa-arrow-left me-2"></i>Return to Dashboard
+                </a>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary btn-lg px-4">
+                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                </a>
+            </div>
+            
+            <!-- Security Notice -->
+            <div class="mt-5 pt-4 border-top">
+                <div class="alert alert-warning d-inline-block">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    <small>This incident has been logged for security auditing purposes.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .error-icon-bg {
+        background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+        transition: all 0.3s ease;
+    }
+    .error-icon-bg:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px rgba(255, 193, 7, 0.3);
+    }
+    .error-icon-bg i {
+        transition: transform 0.3s ease;
+    }
+    .error-icon-bg:hover i {
+        transform: rotate(-10deg) scale(1.1);
+    }
+</style>
+{% endblock %}

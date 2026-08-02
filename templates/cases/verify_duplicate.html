@@ -1,0 +1,650 @@
+{% extends "base.html" %}
+
+{% block title %}Face Verification – SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Face Recognition Verification</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="{{ url_for('cases.view_cases') }}" class="h5 text-white">Cases</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">Verify</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- All original content from verify_duplicate.html -->
+    <!-- Copy the full verification container, alerts, face comparison, etc. -->
+
+    <div class="verification-container mb-5">
+        <!-- Alert -->
+        <div class="alert alert-verification mb-5">
+            <div class="d-flex align-items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h4 class="alert-heading fw-bold mb-2">
+                        <i class="fas fa-user-shield me-2"></i>
+                        Biometric Duplicate Alert
+                    </h4>
+                    <p class="mb-3">
+                        Our OpenCV facial recognition system has identified <span class="fw-bold" style="color: var(--saps-blue);">{{ similar|length }}</span> 
+                        similar face(s) in the SAPS database. Please verify whether this is a new suspect or an existing offender.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-primary">OpenCV AI Detection</span>
+                        <span class="badge bg-warning text-dark">128-dimensional Encoding</span>
+                        <span class="badge bg-success">Cosine Similarity Analysis</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Face Comparison -->
+        <div class="face-comparison-area">
+            <div class="text-center">
+                <div class="face-circle new mb-3">
+                    {% if suspect.photo_path %}
+                        {% set photo_filename = suspect.photo_path.replace('\\', '/').split('/')[-1] %}
+                        <img src="{{ url_for('static', filename='uploads/faces/' + photo_filename) }}" 
+                             alt="New Suspect" 
+                             onerror="this.parentElement.innerHTML='<div class=\'photo-fallback\'><i class=\'fas fa-user fa-4x text-primary\'></i></div>'">
+                    {% else %}
+                        <div class="photo-fallback">
+                            <i class="fas fa-user fa-4x text-primary"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <h4 class="fw-bold mb-1" style="color: var(--saps-green);">{{ suspect.full_name }}</h4>
+                <p class="text-muted mb-2">ID: {{ suspect.id_number }}</p>
+                <span class="badge bg-success py-2 px-3">
+                    <i class="fas fa-user-plus me-1"></i> New Capture
+                </span>
+            </div>
+
+            <div class="comparison-arrow">
+                <i class="fas fa-arrows-alt-h"></i>
+            </div>
+
+            <div class="text-center">
+                <div class="face-circle existing mb-3">
+                    {% if similar and similar|length > 0 and similar[0].suspect.photo_path %}
+                        {% set existing_photo = similar[0].suspect.photo_path.replace('\\', '/').split('/')[-1] %}
+                        <img src="{{ url_for('static', filename='uploads/faces/' + existing_photo) }}" 
+                             alt="Existing Suspect"
+                             onerror="this.parentElement.innerHTML='<div class=\'photo-fallback\'><i class=\'fas fa-user fa-4x text-warning\'></i></div>'">
+                    {% else %}
+                        <div class="photo-fallback">
+                            <i class="fas fa-user fa-4x text-warning"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <h4 class="fw-bold mb-1" style="color: var(--saps-gold);">
+                    {% if similar and similar|length > 0 %}
+                        {{ similar[0].suspect.full_name }}
+                    {% else %}
+                        No Matches
+                    {% endif %}
+                </h4>
+                {% if similar and similar|length > 0 %}
+                <p class="text-muted mb-2">ID: {{ similar[0].suspect.id_number }}</p>
+                <div class="similarity-badge similarity-high">
+                    <i class="fas fa-percentage"></i>
+                    {{ "%.1f"|format(similar[0].similarity * 100) }}% Match
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Similarity Meter -->
+        {% if similar and similar|length > 0 %}
+        <div class="similarity-meter mt-5">
+            <h5 class="fw-bold mb-3">
+                <i class="fas fa-chart-line me-2"></i>
+                Similarity Analysis Results
+            </h5>
+            <div class="similarity-bar-container">
+                <div class="similarity-indicator" style="left: {{ (similar[0].similarity * 100)|int }}%;">
+                    {{ "%.0f"|format(similar[0].similarity * 100) }}%
+                </div>
+            </div>
+            <div class="row text-center mt-3">
+                <div class="col"><small class="text-danger fw-bold">Low</small></div>
+                <div class="col"><small class="text-warning fw-bold">Medium</small></div>
+                <div class="col"><small class="text-success fw-bold">High</small></div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tech Details -->
+        <div class="face-recognition-info mt-5">
+            <h5 class="fw-bold mb-3">
+                <i class="fas fa-microchip me-2"></i>
+                Face Recognition Technology
+            </h5>
+            <p class="mb-3">
+                This system uses <span class="fw-bold">OpenCV with 128-dimensional facial encodings</span> to compare facial features. 
+                Each face is converted to a mathematical vector and compared using cosine similarity.
+            </p>
+            <div class="d-flex flex-wrap">
+                <span class="tech-badge"><i class="fas fa-camera"></i> Face Detection</span>
+                <span class="tech-badge"><i class="fas fa-calculator"></i> 128D Encoding</span>
+                <span class="tech-badge"><i class="fas fa-chart-bar"></i> Cosine Similarity</span>
+                <span class="tech-badge"><i class="fas fa-database"></i> SQLAlchemy Storage</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Suspect Comparison Cards -->
+    <div class="row mb-5">
+        <div class="col-lg-6 mb-4">
+            <div class="suspect-card new-suspect h-100">
+                <div class="card-header-gradient new">
+                    <h4 class="fw-bold mb-0">
+                        <i class="fas fa-user-plus me-2"></i>
+                        New Suspect Profile
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <div class="position-relative d-inline-block mb-3">
+                            <div class="face-circle new" style="width: 150px; height: 150px;">
+                                {% if suspect.photo_path %}
+                                    {% set photo_filename = suspect.photo_path.replace('\\', '/').split('/')[-1] %}
+                                    <img src="{{ url_for('static', filename='uploads/faces/' + photo_filename) }}" 
+                                         alt="{{ suspect.full_name }}"
+                                         onerror="this.parentElement.innerHTML='<div class=\'photo-fallback\'><i class=\'fas fa-user fa-3x text-success\'></i></div>'">
+                                {% else %}
+                                    <div class="photo-fallback">
+                                        <i class="fas fa-user fa-3x text-success"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <span class="position-absolute bottom-0 end-0 bg-success text-white p-2 rounded-circle" style="transform: translate(25%, 25%);">
+                                <i class="fas fa-plus"></i>
+                            </span>
+                        </div>
+                        
+                        <h3 class="fw-bold mb-2" style="color: var(--saps-green);">{{ suspect.full_name }}</h3>
+                        <div class="d-flex justify-content-center gap-3 mb-3">
+                            <div class="text-center">
+                                <div class="fw-bold">ID Number</div>
+                                <code class="text-dark">{{ suspect.id_number }}</code>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-top pt-3">
+                        <h6 class="fw-bold mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Case Information
+                        </h6>
+                        <div class="row g-2 mb-4">
+                            <div class="col-6">
+                                <small class="text-muted d-block">Case Category</small>
+                                <span class="fw-semibold">New Investigation</span>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted d-block">Status</small>
+                                <span class="badge bg-primary">Initial Filing</span>
+                            </div>
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('cases.create_case') }}" class="mt-4">
+                            <input type="hidden" name="confirm_new" value="true">
+                            <button type="submit" class="btn btn-confirm-new verify-btn w-100">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Confirm as New Suspect
+                            </button>
+                            <p class="text-muted small mt-2 text-center">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Creates new suspect record with biometric data
+                            </p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <h3 class="fw-bold mb-4">
+                <i class="fas fa-clone me-2"></i>
+                Similar Face Matches
+                <span class="badge bg-warning ms-2">{{ similar|length }} found</span>
+            </h3>
+            
+            {% if similar %}
+                {% for item in similar %}
+                <div class="match-item mb-3">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="flex-shrink-0">
+                            <div class="face-circle existing" style="width: 80px; height: 80px;">
+                                {% if item.suspect.photo_path %}
+                                    {% set match_photo = item.suspect.photo_path.replace('\\', '/').split('/')[-1] %}
+                                    <img src="{{ url_for('static', filename='uploads/faces/' + match_photo) }}" 
+                                         alt="{{ item.suspect.full_name }}"
+                                         onerror="this.parentElement.innerHTML='<div class=\'photo-fallback\'><i class=\'fas fa-user fa-2x text-warning\'></i></div>'">
+                                {% else %}
+                                    <div class="photo-fallback">
+                                        <i class="fas fa-user fa-2x text-warning"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="fw-bold mb-1">{{ item.suspect.full_name }}</h5>
+                                    <p class="text-muted mb-1">
+                                        <i class="fas fa-id-card me-1"></i>
+                                        {{ item.suspect.id_number }}
+                                    </p>
+                                </div>
+                                <div class="text-end">
+                                    <div class="similarity-badge 
+                                        {% if item.similarity > 0.7 %}similarity-high
+                                        {% elif item.similarity > 0.4 %}similarity-medium
+                                        {% else %}similarity-low{% endif %}">
+                                        {{ "%.1f"|format(item.similarity * 100) }}%
+                                    </div>
+                                    <small class="text-muted d-block mt-1">Confidence</small>
+                                </div>
+                            </div>
+                            
+                            <div class="row g-3 mt-2">
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Active Cases</small>
+                                    <span class="badge bg-danger">{{ item.suspect.active_cases }}</span>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Record Created</small>
+                                    <span class="small">{{ item.suspect.created_at.strftime('%d/%m/%Y') if item.suspect.created_at else 'Unknown' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('suspects.view_suspect', suspect_id=item.suspect.id) }}" 
+                           class="btn btn-outline-primary btn-sm" 
+                           target="_blank">
+                            <i class="fas fa-external-link-alt me-1"></i>
+                            View Full Profile
+                        </a>
+                        <form method="POST" action="{{ url_for('cases.create_case') }}" class="d-inline">
+                            <input type="hidden" name="use_existing_suspect" value="{{ item.suspect.id }}">
+                            <button type="submit" class="btn btn-use-existing verify-btn w-100">
+                                <i class="fas fa-link me-1"></i>
+                                Link Case to This Suspect
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="text-center py-5">
+                <div class="bg-light rounded-3 p-5" style="background: var(--saps-blue-light);">
+                    <i class="fas fa-user-check fa-3x mb-3" style="color: var(--saps-green);"></i>
+                    <h4 class="fw-bold mb-2" style="color: var(--saps-green);">No Duplicates Found</h4>
+                    <p class="text-muted">Proceed with creating a new suspect record</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="text-center mt-5 pt-4 border-top">
+        <a href="{{ url_for('cases.create_case') }}" class="btn btn-outline-primary btn-lg px-5 py-3">
+            <i class="fas fa-arrow-left me-2"></i>
+            Return to Case Creation
+        </a>
+    </div>
+</div>
+
+<!-- Include all original CSS and JS from verify_duplicate.html -->
+<style>
+    /* (copy all styles from verify_duplicate.html) */
+    :root {
+        --saps-blue: #003f87;
+        --saps-blue-dark: #002a5c;
+        --saps-blue-light: #e6f0ff;
+        --saps-gold: #d4af37;
+        --saps-gold-dark: #b8960c;
+        --saps-green: #28a745;
+        --saps-red: #dc3545;
+    }
+    .verification-container {
+        background: linear-gradient(135deg, #f8f9fc 0%, #e9ecef 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(0, 63, 135, 0.1);
+    }
+    .verification-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: linear-gradient(90deg, var(--saps-blue), var(--saps-gold), var(--saps-red));
+    }
+    .alert-verification {
+        background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+        border: none;
+        border-left: 5px solid var(--saps-gold);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.15);
+        animation: pulse-glow 2s infinite;
+    }
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 4px 15px rgba(255, 193, 7, 0.15); }
+        50% { box-shadow: 0 4px 25px rgba(255, 193, 7, 0.3); }
+    }
+    .suspect-comparison {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin: 2rem 0;
+    }
+    .suspect-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 2px solid transparent;
+        overflow: hidden;
+        position: relative;
+    }
+    .suspect-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 50px rgba(0, 63, 135, 0.15);
+    }
+    .suspect-card.new-suspect { border-color: var(--saps-green); }
+    .suspect-card.new-suspect:hover {
+        border-color: var(--saps-green);
+        box-shadow: 0 20px 50px rgba(0, 100, 0, 0.15);
+    }
+    .suspect-card.existing-suspect { border-color: var(--saps-gold); }
+    .suspect-card.existing-suspect:hover {
+        border-color: var(--saps-gold);
+        box-shadow: 0 20px 50px rgba(212, 175, 55, 0.15);
+    }
+    .card-header-gradient {
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+        padding: 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .card-header-gradient::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        transform: rotate(45deg);
+    }
+    .card-header-gradient.new { background: linear-gradient(135deg, var(--saps-green), #2e7d32); }
+    .card-header-gradient.warning { background: linear-gradient(135deg, var(--saps-gold), #c9a227); }
+    .face-comparison-area {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        margin: 2rem 0;
+        flex-wrap: wrap;
+    }
+    .face-circle {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        border: 4px solid;
+        overflow: hidden;
+        position: relative;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s;
+        background: #f8f9fa;
+    }
+    .face-circle:hover {
+        transform: scale(1.05);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+    }
+    .face-circle.new { border-color: var(--saps-green); }
+    .face-circle.existing { border-color: var(--saps-gold); }
+    .face-circle img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s;
+    }
+    .face-circle:hover img { transform: scale(1.1); }
+    .comparison-arrow {
+        font-size: 2.5rem;
+        color: var(--saps-blue);
+        animation: bounce 2s infinite;
+    }
+    @keyframes bounce {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(10px); }
+    }
+    .similarity-meter {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        margin: 2rem 0;
+        border: 2px solid var(--saps-blue-light);
+    }
+    .similarity-bar-container {
+        height: 20px;
+        background: linear-gradient(90deg, #dc3545, #ffc107, #28a745);
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+        margin: 1rem 0;
+    }
+    .similarity-indicator {
+        position: absolute;
+        top: -5px;
+        width: 40px;
+        height: 30px;
+        background: var(--saps-blue);
+        border-radius: 8px;
+        transform: translateX(-50%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        transition: left 1.5s ease-in-out;
+    }
+    .similarity-indicator::after {
+        content: '';
+        position: absolute;
+        bottom: -5px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 5px solid var(--saps-blue);
+    }
+    .match-details {
+        background: linear-gradient(135deg, var(--saps-blue-light), rgba(212, 175, 55, 0.05));
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border: 2px solid rgba(0, 63, 135, 0.1);
+    }
+    .match-item {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 2px solid transparent;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+    }
+    .match-item:hover {
+        transform: translateX(5px);
+        border-color: var(--saps-gold);
+        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.15);
+    }
+    .match-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 5px;
+        background: linear-gradient(180deg, var(--saps-gold), #c9a227);
+        border-radius: 5px 0 0 5px;
+    }
+    .similarity-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .similarity-high { background: linear-gradient(135deg, #e8f5e9, #c8e6c9); color: #2e7d32; }
+    .similarity-medium { background: linear-gradient(135deg, #fff3e0, #ffe0b2); color: #e65100; }
+    .similarity-low { background: linear-gradient(135deg, #ffebee, #ffcdd2); color: #c62828; }
+    .verification-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 2rem;
+    }
+    .verify-btn {
+        padding: 1rem 2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        min-width: 200px;
+        border: none;
+    }
+    .verify-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+    }
+    .verify-btn:hover::before {
+        width: 300px;
+        height: 300px;
+    }
+    .btn-confirm-new {
+        background: linear-gradient(135deg, var(--saps-green), #2e7d32);
+        color: white;
+    }
+    .btn-confirm-new:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(46, 125, 50, 0.3);
+        color: white;
+    }
+    .btn-use-existing {
+        background: linear-gradient(135deg, var(--saps-gold), #c9a227);
+        color: var(--saps-blue);
+    }
+    .btn-use-existing:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(212, 175, 55, 0.3);
+        color: var(--saps-blue);
+    }
+    .face-recognition-info {
+        background: var(--saps-blue-light);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+        border-left: 5px solid var(--saps-blue);
+    }
+    .tech-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(0, 63, 135, 0.1);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        color: var(--saps-blue);
+        font-weight: 600;
+        margin: 0.5rem;
+    }
+    .photo-helper { position: relative; display: inline-block; }
+    .photo-fallback {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--saps-blue-light), #e9ecef);
+    }
+    @media (max-width: 768px) {
+        .verification-container { padding: 1.5rem; }
+        .face-comparison-area { flex-direction: column; }
+        .comparison-arrow { transform: rotate(90deg); margin: 1rem 0; }
+        .verify-btn { min-width: 100%; }
+        .suspect-comparison { grid-template-columns: 1fr; }
+        .face-circle { width: 150px; height: 150px; }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const matchItems = document.querySelectorAll('.match-item');
+        matchItems.forEach(item => {
+            item.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateX(10px)';
+                this.style.boxShadow = '0 12px 30px rgba(212, 175, 55, 0.2)';
+            });
+            item.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateX(0)';
+                this.style.boxShadow = 'none';
+            });
+        });
+        const confirmNewBtn = document.querySelector('.btn-confirm-new');
+        if (confirmNewBtn) {
+            confirmNewBtn.addEventListener('click', function(e) {
+                if (!confirm('Are you sure this is a NEW suspect? This will create a new biometric record.')) {
+                    e.preventDefault();
+                }
+            });
+        }
+        const existingForms = document.querySelectorAll('form[action*="use_existing_suspect"]');
+        existingForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                if (!confirm('Link this case to existing suspect? The new case will be added to their existing profile.')) {
+                    e.preventDefault();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

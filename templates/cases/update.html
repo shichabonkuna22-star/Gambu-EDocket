@@ -1,0 +1,767 @@
+{% extends "base.html" %}
+
+{% block title %}Update Case – SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Update Case</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="{{ url_for('cases.view_cases') }}" class="h5 text-white">Cases</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">Update</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Update Page Specific Styles */
+    .case-header {
+        background: linear-gradient(135deg, rgba(0, 63, 135, 0.1), rgba(212, 175, 55, 0.05));
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border-left: 6px solid var(--saps-blue);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .case-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 150px;
+        height: 150px;
+        background: radial-gradient(circle, rgba(0, 63, 135, 0.05) 0%, transparent 70%);
+        z-index: 0;
+    }
+    
+    .case-number-badge {
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+        letter-spacing: 1px;
+        padding: 0.5rem 1.5rem;
+        border-radius: 25px;
+        display: inline-block;
+        box-shadow: 0 4px 15px rgba(0, 63, 135, 0.2);
+    }
+    
+    .update-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(0, 63, 135, 0.1);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .update-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0, 63, 135, 0.15);
+        border-color: var(--saps-blue);
+    }
+    
+    .update-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 8px;
+        height: 100%;
+        background: linear-gradient(to bottom, var(--saps-blue), var(--saps-gold));
+        border-radius: 8px 0 0 8px;
+    }
+    
+    .evidence-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: linear-gradient(135deg, var(--saps-gold), #c9a227);
+        color: var(--saps-blue-dark);
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        box-shadow: 0 3px 10px rgba(212, 175, 55, 0.3);
+        transition: all 0.3s;
+    }
+    
+    .evidence-badge:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+    }
+    
+    .update-avatar {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, var(--saps-blue-light), #e6f0ff);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: var(--saps-blue);
+        border: 3px solid white;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s;
+    }
+    
+    .update-avatar:hover {
+        transform: scale(1.1);
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+    }
+    
+    .timeline-connector {
+        position: absolute;
+        left: 35px;
+        top: 60px;
+        bottom: -20px;
+        width: 2px;
+        background: linear-gradient(to bottom, var(--saps-blue), var(--saps-gold));
+        opacity: 0.3;
+    }
+    
+    .update-type-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        transition: all 0.3s;
+    }
+    
+    .update-type-icon.status-change {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        color: #1565c0;
+    }
+    
+    .update-type-icon.note {
+        background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+        color: #e65100;
+    }
+    
+    .update-type-icon.evidence {
+        background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+        color: #7b1fa2;
+    }
+    
+    .update-type-icon.assignment {
+        background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+        color: #2e7d32;
+    }
+    
+    .status-transition {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: rgba(0, 63, 135, 0.03);
+        border-radius: 12px;
+        margin: 1rem 0;
+    }
+    
+    .status-transition i {
+        font-size: 1.2rem;
+        color: var(--saps-blue);
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .document-card {
+        background: linear-gradient(135deg, #f8fafc, #e6f0ff);
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: all 0.3s;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .document-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--saps-blue);
+        background: linear-gradient(135deg, #e6f0ff, #d4e4ff);
+        box-shadow: 0 10px 25px rgba(0, 63, 135, 0.1);
+    }
+    
+    .document-icon {
+        width: 60px;
+        height: 60px;
+        background: white;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--saps-blue);
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s;
+    }
+    
+    .document-card:hover .document-icon {
+        transform: rotate(10deg) scale(1.1);
+        color: var(--saps-gold);
+    }
+    
+    .suspect-profile {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        border: 2px solid rgba(0, 63, 135, 0.1);
+        transition: all 0.3s;
+    }
+    
+    .suspect-profile:hover {
+        border-color: var(--saps-blue);
+        box-shadow: 0 10px 30px rgba(0, 63, 135, 0.15);
+        transform: translateY(-3px);
+    }
+    
+    .face-verified-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: linear-gradient(135deg, #4caf50, #2e7d32);
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        box-shadow: 0 3px 10px rgba(76, 175, 80, 0.3);
+        animation: glow 2s infinite;
+    }
+    
+    @keyframes glow {
+        0%, 100% { box-shadow: 0 3px 10px rgba(76, 175, 80, 0.3); }
+        50% { box-shadow: 0 3px 20px rgba(76, 175, 80, 0.6); }
+    }
+    
+    .activity-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+        animation: blink 2s infinite;
+    }
+    
+    .activity-indicator.active {
+        background: #4caf50;
+        box-shadow: 0 0 10px #4caf50;
+    }
+    
+    .activity-indicator.inactive {
+        background: #f44336;
+        box-shadow: 0 0 10px #f44336;
+    }
+    
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(0, 63, 135, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .form-section-title {
+        color: var(--saps-blue);
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--saps-blue-light);
+        position: relative;
+    }
+    
+    .form-section-title::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 80px;
+        height: 2px;
+        background: var(--saps-gold);
+    }
+    
+    .update-form .form-control:focus,
+    .update-form .form-select:focus,
+    .update-form .form-textarea:focus {
+        border-color: var(--saps-gold);
+        box-shadow: 0 0 0 0.25rem rgba(212, 175, 55, 0.15);
+    }
+    
+    .priority-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    
+    .priority-high { background: linear-gradient(135deg, #dc3545, #c62828); }
+    .priority-medium { background: linear-gradient(135deg, #ff9800, #ef6c00); }
+    .priority-low { background: linear-gradient(135deg, #4caf50, #2e7d32); }
+    
+    .case-metrics {
+        background: linear-gradient(135deg, var(--saps-blue-light), #e6f0ff);
+        border-radius: 16px;
+        padding: 1.5rem;
+    }
+    
+    .metric-item {
+        text-align: center;
+        padding: 1rem;
+        transition: all 0.3s;
+        border-radius: 12px;
+    }
+    
+    .metric-item:hover {
+        background: rgba(255, 255, 255, 0.8);
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        line-height: 1;
+    }
+    
+    .metric-label {
+        color: var(--saps-blue);
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .case-header {
+            padding: 1.5rem;
+        }
+        
+        .update-card {
+            margin-bottom: 1.5rem;
+        }
+        
+        .timeline-connector {
+            display: none;
+        }
+        
+        .status-transition {
+            flex-direction: column;
+            text-align: center;
+            gap: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+    <!-- Case Header -->
+    <div class="case-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-primary-gradient rounded-3 p-3 me-3">
+                        <i class="fas fa-gavel fa-2x text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="display-6 fw-bold text-primary mb-1">{{ case.title }}</h1>
+                        <div class="case-number-badge mb-2">
+                            <i class="fas fa-hashtag me-2"></i>{{ case.case_number }}
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <span class="status-badge status-{{ case.status }}">
+                        <i class="fas fa-{% if case.status == 'open' %}folder-open{% elif case.status == 'investigating' %}search{% elif case.status == 'in_court' %}balance-scale{% elif case.status == 'closed' %}check-circle{% else %}archive{% endif %} me-1"></i>
+                        {{ case.status|replace('_', ' ')|title }}
+                    </span>
+                    <span class="badge bg-dark">
+                        <i class="fas fa-{% if case.severity == 'high' %}exclamation-triangle{% elif case.severity == 'medium' %}exclamation-circle{% else %}info-circle{% endif %} me-1"></i>
+                        {{ case.severity|title }} Priority
+                    </span>
+                    <span class="badge bg-secondary">
+                        <i class="fas fa-tag me-1"></i>{{ case.category|title }}
+                    </span>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <div class="case-metrics">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="metric-item">
+                                <div class="metric-value">{{ case.updates.count() }}</div>
+                                <div class="metric-label">Updates</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-item">
+                                <div class="metric-value">
+                                    {% set days = (now - case.created_at).days %}
+                                    {{ days if days > 0 else '1' }}
+                                </div>
+                                <div class="metric-label">Days Active</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column: Case Details & Updates -->
+        <div class="col-lg-8">
+            <!-- Case Description -->
+            <div class="form-section">
+                <h3 class="form-section-title">
+                    <i class="fas fa-align-left me-2"></i>Case Details
+                </h3>
+                <div class="mb-4">
+                    <p class="lead">{{ case.description }}</p>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="icon-circle bg-blue-light p-2 rounded-circle me-3">
+                                <i class="fas fa-map-marker-alt text-primary"></i>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">Incident Location</small>
+                                <span class="fw-semibold">{{ case.location or 'Not specified' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="icon-circle bg-gold-light p-2 rounded-circle me-3">
+                                <i class="fas fa-calendar-alt text-gold"></i>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">Incident Date</small>
+                                <span class="fw-semibold">
+                                    {{ case.incident_date.strftime('%d %b %Y') if case.incident_date else 'Not specified' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="icon-circle bg-blue-light p-2 rounded-circle me-3">
+                                <i class="fas fa-user-tie text-primary"></i>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">Assigned Officer</small>
+                                <span class="fw-semibold">{{ case.assigned_officer.full_name }}</span>
+                                <div class="small text-muted">Badge: {{ case.assigned_officer.badge_number }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="icon-circle bg-gold-light p-2 rounded-circle me-3">
+                                <i class="fas fa-clock text-gold"></i>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">Last Updated</small>
+                                <span class="fw-semibold">
+                                    {{ case.updated_at.strftime('%d %b %Y %H:%M') }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Case Updates Timeline -->
+            <div class="form-section">
+                <h3 class="form-section-title">
+                    <i class="fas fa-history me-2"></i>Case Timeline
+                    <span class="badge bg-primary ms-2">{{ case.updates.count() }}</span>
+                </h3>
+                
+                {% for update in case.updates %}
+                <div class="update-card mb-4" id="update-{{ update.id }}">
+                    <div class="evidence-badge" style="display: none;">
+                        <i class="fas fa-paperclip me-1"></i>Evidence
+                    </div>
+                    
+                    <div class="p-4">
+                        <div class="d-flex align-items-start">
+                            <div class="position-relative">
+                                <div class="update-avatar me-3">
+                                    {{ update.officer.first_name[0] }}{{ update.officer.last_name[0] }}
+                                </div>
+                                {% if not loop.last %}
+                                <div class="timeline-connector"></div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="fw-bold mb-1">{{ update.officer.full_name }}</h6>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="update-type-icon {{ update.update_type.replace('_', '-') }}">
+                                                <i class="fas fa-{% if update.update_type == 'status_change' %}exchange-alt{% elif update.update_type == 'evidence_added' %}paperclip{% elif update.update_type == 'case_created' %}plus-circle{% else %}sticky-note{% endif %}"></i>
+                                            </div>
+                                            <span class="text-muted small">
+                                                {{ update.created_at.strftime('%d %b %Y at %H:%M') }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        {% if update.previous_status and update.new_status %}
+                                        <div class="status-transition">
+                                            <span class="status-badge status-{{ update.previous_status }}">
+                                                {{ update.previous_status|replace('_', ' ')|title }}
+                                            </span>
+                                            <i class="fas fa-long-arrow-alt-right"></i>
+                                            <span class="status-badge status-{{ update.new_status }}">
+                                                {{ update.new_status|replace('_', ' ')|title }}
+                                            </span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                {% if update.notes %}
+                                <div class="alert alert-light border mt-3">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-quote-left text-muted me-2 mt-1"></i>
+                                        <div class="flex-grow-1">
+                                            <p class="mb-0">{{ update.notes }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No updates yet</h5>
+                    <p class="text-muted">Start by updating the case status below</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Case Documents -->
+            {% if case.documents.count() > 0 %}
+            <div class="form-section">
+                <h3 class="form-section-title">
+                    <i class="fas fa-file-alt me-2"></i>Case Documents
+                    <span class="badge bg-primary ms-2">{{ case.documents.count() }}</span>
+                </h3>
+                <div class="row g-3">
+                    {% for document in case.documents %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="document-card" onclick="viewDocument('{{ document.id }}')">
+                            <div class="document-icon">
+                                <i class="fas fa-{% if document.document_type == 'statement' %}file-signature{% elif document.document_type == 'evidence' %}fingerprint{% elif document.document_type == 'warrant' %}gavel{% else %}file-pdf{% endif %}"></i>
+                            </div>
+                            <h6 class="fw-bold mb-2">{{ document.filename }}</h6>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-{{ 'lock' if document.is_confidential else 'lock-open' }} me-1"></i>
+                                    {{ 'Confidential' if document.is_confidential else 'Open' }}
+                                </small>
+                                <small class="text-muted">
+                                    {{ document.uploaded_at.strftime('%d %b') }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column: Suspect & Updates -->
+        <div class="col-lg-4">
+            <!-- Suspect Information -->
+            {% if case.suspect %}
+            <div class="suspect-profile mb-4">
+                <div class="position-relative">
+                    {% if case.suspect.photo_path %}
+                    <img src="{{ url_for('static', filename='uploads/faces/' + case.suspect.photo_path.split('/')[-1]) }}" 
+                         class="img-fluid rounded-3 mb-3" 
+                         alt="Suspect Photo"
+                         style="width: 100%; height: 200px; object-fit: cover;">
+                    {% if case.suspect.face_encoding_path %}
+                    <div class="face-verified-badge" title="Face Verified">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                
+                <h4 class="fw-bold mb-3 text-primary">
+                    <i class="fas fa-user-secret me-2"></i>Suspect Profile
+                </h4>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="fw-bold mb-0">{{ case.suspect.full_name }}</h5>
+                        <span class="badge bg-warning">{{ case.suspect.active_cases }} active cases</span>
+                    </div>
+                    <div class="small text-muted">ID: {{ case.suspect.id_number }}</div>
+                </div>
+                
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="info-item">
+                            <small class="text-muted d-block">Date of Birth</small>
+                            <span class="fw-semibold">
+                                {{ case.suspect.date_of_birth.strftime('%d %b %Y') if case.suspect.date_of_birth else 'Unknown' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="info-item">
+                            <small class="text-muted d-block">Gender</small>
+                            <span class="fw-semibold">{{ case.suspect.gender|title if case.suspect.gender else 'Unknown' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-12 mt-2">
+                        <div class="info-item">
+                            <small class="text-muted d-block">Contact Number</small>
+                            <span class="fw-semibold">{{ case.suspect.contact_number or 'Unknown' }}</span>
+                        </div>
+                    </div>
+                    {% if case.suspect.address %}
+                    <div class="col-12 mt-2">
+                        <div class="info-item">
+                            <small class="text-muted d-block">Address</small>
+                            <span class="fw-semibold">{{ case.suspect.address|truncate(50) }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mt-4">
+                    <a href="{{ url_for('suspects.view_suspect', suspect_id=case.suspect.id) }}" 
+                       class="btn btn-outline-primary w-100">
+                        <i class="fas fa-external-link-alt me-2"></i>View Full Profile
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Update Case Form -->
+            <div class="form-section update-form">
+                <h3 class="form-section-title">
+                    <i class="fas fa-edit me-2"></i>Update Case
+                </h3>
+                
+                {% if case.can_be_modified_by(current_user) %}
+                <form method="POST" action="{{ url_for('cases.update_case_status', case_id=case.id) }}">
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="fas fa-exchange-alt me-1"></i>Update Status
+                        </label>
+                        <select name="status" class="form-select" id="statusSelect" required>
+                            <option value="open" {% if case.status == 'open' %}selected{% endif %}>
+                                📂 Open - Initial investigation phase
+                            </option>
+                            <option value="investigating" {% if case.status == 'investigating' %}selected{% endif %}>
+                                🔍 Investigating - Active investigation in progress
+                            </option>
+                            <option value="in_court" {% if case.status == 'in_court' %}selected{% endif %}>
+                                ⚖️ In Court - Legal proceedings underway
+                            </option>
+                            <option value="closed" {% if case.status == 'closed' %}selected{% endif %}>
+                                ✅ Closed - Case resolved
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="notes" class="form-label fw-semibold">
+                            <i class="fas fa-sticky-note me-1"></i>Update Notes
+                        </label>
+                        <textarea name="notes" 
+                                  id="notes" 
+                                  class="form-control" 
+                                  rows="4" 
+                                  placeholder="Describe the reason for this status change, or add any relevant notes..."
+                                  required></textarea>
+                        <div class="form-text">
+                            This note will be added to the case timeline.
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-saps w-100 py-3">
+                        <i class="fas fa-paper-plane me-2"></i>Submit Update
+                    </button>
+                </form>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    You do not have permission to update this case.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Update button hover effect
+        const submitBtn = document.querySelector('.btn-saps');
+        if (submitBtn) {
+            submitBtn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-3px)';
+            });
+            submitBtn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        }
+        
+        // Document card click
+        window.viewDocument = function(docId) {
+            alert('Viewing document ID: ' + docId + '\n(This feature is under development)');
+        };
+    });
+</script>
+{% endblock %}

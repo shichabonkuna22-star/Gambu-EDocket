@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}500 – Server Error | SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Server Error</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">500</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+            <!-- Error Icon -->
+            <div class="mb-5">
+                <div class="error-icon-wrapper d-inline-block position-relative">
+                    <div class="error-icon-bg bg-info-subtle rounded-circle p-5">
+                        <i class="fas fa-server fa-5x text-info"></i>
+                    </div>
+                    <span class="position-absolute top-0 start-100 translate-middle badge bg-danger rounded-pill px-3 py-2">
+                        <i class="fas fa-exclamation-triangle me-1"></i> 500
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Error Message -->
+            <h1 class="display-4 fw-bold text-primary mb-3">
+                <i class="fas fa-tools me-2 text-info"></i>Server Error
+            </h1>
+            <p class="lead text-muted mb-4">
+                Something went wrong on our end. Our technical team has been notified and is working to resolve the issue.
+            </p>
+            
+            <!-- Status Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center justify-content-center gap-4 flex-wrap">
+                        <div class="text-center">
+                            <div class="text-muted small">System Status</div>
+                            <span class="badge bg-warning px-3 py-2">
+                                <i class="fas fa-sync-alt fa-spin me-1"></i> Investigating
+                            </span>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-muted small">Incident ID</div>
+                            <code class="bg-light p-2 rounded">ERR-{{ now.strftime('%Y%m%d') }}-{{ range(1000, 9999)|random }}</code>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-muted small">Reported</div>
+                            <span class="fw-semibold">{{ now.strftime('%d %b %Y, %H:%M') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- What to do -->
+            <div class="alert alert-info border-0 shadow-sm mb-4">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="fas fa-clock fa-2x"></i>
+                    <div class="text-start">
+                        <h6 class="fw-bold mb-1">Please try again in a few minutes</h6>
+                        <p class="mb-0 small">If this issue persists, please contact your system administrator.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                <a href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('main.index') }}" 
+                   class="btn btn-saps btn-lg px-5">
+                    <i class="fas fa-arrow-left me-2"></i>Return Home
+                </a>
+                <button onclick="location.reload()" class="btn btn-outline-primary btn-lg px-4">
+                    <i class="fas fa-sync-alt me-2"></i>Try Again
+                </button>
+            </div>
+            
+            <!-- Support -->
+            <div class="mt-5 pt-4 border-top">
+                <div class="d-flex flex-wrap justify-content-center gap-4">
+                    <a href="#" class="text-decoration-none text-primary">
+                        <i class="fas fa-envelope me-1"></i> Report Issue
+                    </a>
+                    <span class="text-muted">|</span>
+                    <span class="text-muted">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        Error logged for investigation
+                    </span>
+                    <span class="text-muted">|</span>
+                    <a href="#" class="text-decoration-none text-primary">
+                        <i class="fas fa-life-ring me-1"></i> Help Center
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .error-icon-bg {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        transition: all 0.3s ease;
+    }
+    .error-icon-bg:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px rgba(13, 202, 240, 0.3);
+    }
+    .error-icon-bg i {
+        transition: transform 0.3s ease;
+    }
+    .error-icon-bg:hover i {
+        transform: rotate(10deg) scale(1.1);
+    }
+    .badge-warning {
+        background: linear-gradient(135deg, #ffc107, #ff9800);
+        color: #000;
+    }
+    code {
+        background: #f8f9fa;
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        border: 1px solid #dee2e6;
+    }
+    .alert-info {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        border-color: #90caf9;
+    }
+</style>
+{% endblock %}

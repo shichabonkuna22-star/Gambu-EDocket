@@ -1,0 +1,885 @@
+{% extends "base.html" %}
+
+{% block title %}Case {{ case.case_number }} – SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Case Details</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="{{ url_for('cases.view_cases') }}" class="h5 text-white">Cases</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">{{ case.case_number }}</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Case Header -->
+    <div class="case-header animate__animated animate__fadeIn">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <nav aria-label="breadcrumb" class="mb-3">
+                    <ol class="breadcrumb breadcrumb-saps">
+                        <li class="breadcrumb-item">
+                            <a href="{{ url_for('main.dashboard') }}" class="text-primary">
+                                <i class="fas fa-home me-1"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="{{ url_for('cases.view_cases') }}" class="text-primary">
+                                <i class="fas fa-gavel me-1"></i>Cases
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">
+                            <i class="fas fa-folder-open me-1"></i>{{ case.case_number }}
+                        </li>
+                    </ol>
+                </nav>
+                
+                <div class="d-flex align-items-start mb-3">
+                    <h1 class="display-5 fw-bold text-primary mb-3 flex-grow-1">
+                        {{ case.title }}
+                    </h1>
+                    <div class="ms-3">
+                        <div class="case-number-badge">
+                            <i class="fas fa-hashtag me-2"></i>{{ case.case_number }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex flex-wrap gap-3 mb-4">
+                    <span class="status-badge status-{{ case.status }} hover-lift">
+                        <i class="fas fa-{{ 'play-circle' if case.status == 'open' else 'search' if case.status == 'investigating' else 'balance-scale' if case.status == 'in_court' else 'check-circle' if case.status == 'closed' else 'archive' }} me-1"></i>
+                        {{ case.status.replace('_', ' ')|title }}
+                    </span>
+                    
+                    <span class="priority-indicator priority-{{ case.severity }} badge bg-{{ 'danger' if case.severity == 'high' else 'warning' if case.severity == 'medium' else 'success' }} hover-lift">
+                        <i class="fas fa-{{ 'exclamation-triangle' if case.severity == 'high' else 'exclamation-circle' if case.severity == 'medium' else 'info-circle' }} me-1"></i>
+                        {{ case.severity|title }} Priority
+                    </span>
+                    
+                    {% if case.is_confidential %}
+                    <span class="badge bg-dark hover-lift">
+                        <i class="fas fa-lock me-1"></i> Confidential
+                    </span>
+                    {% endif %}
+                    
+                    <span class="badge bg-primary-gradient hover-lift">
+                        <i class="fas fa-tag me-1"></i>{{ case.category|title }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
+                <div class="d-flex flex-column flex-lg-row gap-3 justify-content-lg-end">
+                    {% if case.can_be_modified_by(current_user) %}
+                    <!-- ===== WRAPPED BUTTON ===== -->
+                    <div class="status-action-wrapper">
+                        <button class="btn btn-saps hover-scale w-100" data-bs-toggle="modal" data-bs-target="#statusModal">
+                            <i class="fas fa-exchange-alt me-2"></i>Update Status
+                        </button>
+                    </div>
+                    {% endif %}
+                    
+                    <button class="btn btn-saps-gold hover-scale" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Print Case
+                    </button>
+                </div>
+                
+                <div class="mt-3 text-muted small">
+                    <i class="fas fa-clock me-1"></i>
+                    Last updated {{ case.updated_at.strftime('%d %b %Y at %H:%M') }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column - Main Content -->
+        <div class="col-lg-8">
+            <!-- Case Description -->
+            <div class="case-detail-card mb-4">
+                <div class="card-header-enhanced">
+                    <h5>
+                        <i class="fas fa-align-left text-primary"></i>
+                        Case Description
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="case-description">
+                        <p class="lead text-dark mb-4 bg-light p-3 rounded-3 border border-light">
+                            {{ case.description }}
+                        </p>
+                        
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <small class="text-muted d-block">Location</small>
+                                <strong>{{ case.location or 'Not specified' }}</strong>
+                            </div>
+                            
+                            <div class="info-item">
+                                <small class="text-muted d-block">Incident Date</small>
+                                <strong>{{ case.incident_date.strftime('%d %B %Y') if case.incident_date else 'Not specified' }}</strong>
+                            </div>
+                            
+                            <div class="info-item">
+                                <small class="text-muted d-block">Reported Date</small>
+                                <strong>{{ case.reported_date.strftime('%d %B %Y') }}</strong>
+                            </div>
+                            
+                            <div class="info-item">
+                                <small class="text-muted d-block">Case Age</small>
+                                <strong>{{ ((now - case.created_at).days) if now else 'N/A' }} days</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Case History Timeline -->
+            <div class="case-detail-card mb-4">
+                <div class="card-header-enhanced d-flex justify-content-between align-items-center">
+                    <h5>
+                        <i class="fas fa-history text-primary"></i>
+                        Case History & Updates
+                    </h5>
+                    <span class="badge bg-primary-gradient">{{ case.updates.count() }} updates</span>
+                </div>
+                <div class="card-body p-4">
+                    {% if case.updates.count() > 0 %}
+                    <div class="timeline-enhanced">
+                        {% for update in case.updates %}
+                        <div class="timeline-item-enhanced {{ update.update_type|replace('_', '-') }} animate__animated animate__fadeInUp">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if update.update_type == 'case_created' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-plus-circle me-1"></i>Case Created
+                                        </span>
+                                    {% elif update.update_type == 'status_change' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-exchange-alt me-1"></i>Status Changed
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-edit me-1"></i>Update
+                                        </span>
+                                    {% endif %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>{{ update.created_at.strftime('%d %b %Y, %H:%M') }}
+                                    </small>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-user-shield me-1"></i>{{ update.officer.full_name }}
+                                </small>
+                            </div>
+                            
+                            <p class="mb-2 text-dark">{{ update.notes }}</p>
+                            
+                            {% if update.previous_status and update.new_status %}
+                            <div class="d-flex align-items-center gap-2 mt-3">
+                                <span class="badge bg-light text-dark px-3 py-1">
+                                    {{ update.previous_status|title }}
+                                </span>
+                                <i class="fas fa-long-arrow-alt-right text-muted"></i>
+                                <span class="badge bg-primary-gradient px-3 py-1">
+                                    {{ update.new_status|title }}
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <div class="empty-state-icon mb-3">
+                            <i class="fas fa-history fa-3x text-muted"></i>
+                        </div>
+                        <h5 class="text-muted">No updates recorded</h5>
+                        <p class="text-muted mb-0">Case history will appear here as updates are made</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Assigned Officer Card - with aggressive gap reduction -->
+            <div class="case-detail-card assigned-officer-card">
+                <div class="card-header-enhanced">
+                    <h5>
+                        <i class="fas fa-user-shield text-primary"></i>
+                        Assigned Officer
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="officer-card">
+                        <div class="officer-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h4 class="fw-bold text-primary mb-2">{{ case.assigned_officer.full_name }}</h4>
+                        <p class="text-gold fw-semibold mb-3">
+                            <i class="fas fa-shield-alt me-1"></i>{{ case.assigned_officer.rank|title }}
+                        </p>
+                        
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="info-item">
+                                    <small class="text-muted d-block">Badge Number</small>
+                                    <strong class="text-primary">{{ case.assigned_officer.badge_number }}</strong>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="info-item">
+                                    <small class="text-muted d-block">Station</small>
+                                    <strong>{{ case.assigned_officer.station }}</strong>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="info-item">
+                                    <small class="text-muted d-block">Role</small>
+                                    <strong class="text-capitalize">{{ case.assigned_officer.role }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <a href="#" class="btn btn-outline-primary btn-sm action-btn w-100">
+                                <i class="fas fa-envelope me-2"></i>Contact Officer
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Side Information -->
+        <div class="col-lg-4">
+            <!-- Suspect Information -->
+            {% if case.suspect %}
+            <div class="case-detail-card mb-4 border-gold">
+                <div class="card-header-enhanced bg-gold-light">
+                    <h5>
+                        <i class="fas fa-user-secret text-gold"></i>
+                        Suspect Profile
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center">
+                        <div class="suspect-photo-enhanced mb-3">
+                            {% if case.suspect.photo_path %}
+                            <img src="{{ url_for('static', filename=case.suspect.photo_path|suspect_photo) }}" 
+                                 alt="{{ case.suspect.full_name }}"
+                                 class="img-fluid"
+                                 onerror="this.src='{{ url_for('static', filename='img/default_suspect.jpg') }}'">
+                            {% else %}
+                            <div class="photo-placeholder">
+                                <i class="fas fa-user fa-3x"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <h4 class="fw-bold mb-2">{{ case.suspect.full_name }}</h4>
+                        <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
+                            <span class="badge bg-dark">
+                                <i class="fas fa-id-card me-1"></i>{{ case.suspect.id_number }}
+                            </span>
+                            {% if case.suspect.face_encoding_path %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-robot me-1"></i>Face Encoded
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="info-item p-2 text-center">
+                                    <small class="text-muted d-block">Gender</small>
+                                    <strong>{{ case.suspect.gender|title if case.suspect.gender else 'N/A' }}</strong>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="info-item p-2 text-center">
+                                    <small class="text-muted d-block">Date of Birth</small>
+                                    <strong>{{ case.suspect.date_of_birth.strftime('%d/%m/%Y') if case.suspect.date_of_birth else 'N/A' }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <a href="{{ url_for('suspects.view_suspect', suspect_id=case.suspect.id) }}" 
+                               class="btn btn-saps action-btn">
+                                <i class="fas fa-eye me-2"></i>View Full Profile
+                            </a>
+                            
+                            {% if case.suspect.active_cases > 1 %}
+                            <div class="alert alert-warning py-2 mb-0 animate__animated animate__pulse animate__infinite">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-exclamation-triangle fa-lg me-2"></i>
+                                    <div>
+                                        <strong>Warning:</strong> 
+                                        {{ case.suspect.active_cases }} active cases
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Case Metadata (without officer field) -->
+            <div class="case-detail-card">
+                <div class="card-header-enhanced">
+                    <h5>
+                        <i class="fas fa-database text-primary"></i>
+                        Case Metadata
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <small class="text-muted d-block">
+                                <i class="fas fa-calendar-plus me-1"></i>Created
+                            </small>
+                            <strong>{{ case.created_at.strftime('%d %b %Y') }}</strong>
+                            <div class="text-muted extra-small">{{ case.created_at.strftime('%H:%M') }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <small class="text-muted d-block">
+                                <i class="fas fa-sync-alt me-1"></i>Last Updated
+                            </small>
+                            <strong>{{ case.updated_at.strftime('%d %b %Y') }}</strong>
+                            <div class="text-muted extra-small">{{ case.updated_at.strftime('%H:%M') }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <small class="text-muted d-block">
+                                <i class="fas fa-clock me-1"></i>Case Age
+                            </small>
+                            <strong>{{ ((now - case.created_at).days) if now else 'N/A' }} days</strong>
+                        </div>
+                        
+                        <div class="info-item">
+                            <small class="text-muted d-block">
+                                <i class="fas fa-chart-line me-1"></i>Status Duration
+                            </small>
+                            <strong>{{ case.status|title }}</strong>
+                        </div>
+                    </div>
+                    
+                    {% if current_user.role in ['admin', 'supervisor'] %}
+                    <div class="mt-4 pt-3 border-top">
+                        <small class="text-muted d-block mb-2">Administration</small>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-dark btn-sm">
+                                <i class="fas fa-file-export me-2"></i>Export Case
+                            </button>
+                            {% if case.status == 'closed' %}
+                            <button class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-archive me-2"></i>Archive Case
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Update Modal -->
+{% if case.can_be_modified_by(current_user) %}
+<div class="modal fade" id="statusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content status-modal-content">
+            <div class="modal-header bg-primary-gradient text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exchange-alt me-2"></i>
+                    Update Case Status
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('cases.update_case_status', case_id=case.id) }}" id="statusForm">
+                <div class="modal-body p-4">
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold mb-3">Select New Status</label>
+                        <div class="status-options">
+                            <div class="status-option" onclick="selectStatus('open')">
+                                <div class="d-flex align-items-center">
+                                    <div class="status-icon me-3">
+                                        <i class="fas fa-play-circle text-primary fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1">Open</h6>
+                                        <p class="text-muted small mb-0">Case is newly created and pending investigation</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="status-option" onclick="selectStatus('investigating')">
+                                <div class="d-flex align-items-center">
+                                    <div class="status-icon me-3">
+                                        <i class="fas fa-search text-warning fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1">Investigating</h6>
+                                        <p class="text-muted small mb-0">Active investigation in progress</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="status-option" onclick="selectStatus('in_court')">
+                                <div class="d-flex align-items-center">
+                                    <div class="status-icon me-3">
+                                        <i class="fas fa-balance-scale text-info fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1">In Court</h6>
+                                        <p class="text-muted small mb-0">Case is currently in legal proceedings</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="status-option" onclick="selectStatus('closed')">
+                                <div class="d-flex align-items-center">
+                                    <div class="status-icon me-3">
+                                        <i class="fas fa-check-circle text-success fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1">Closed</h6>
+                                        <p class="text-muted small mb-0">Case has been resolved or completed</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="status" id="selectedStatus" value="{{ case.status }}" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="statusNotes" class="form-label fw-semibold">
+                            <i class="fas fa-edit me-1"></i>
+                            Status Update Notes
+                        </label>
+                        <textarea name="notes" 
+                                  id="statusNotes" 
+                                  class="form-control" 
+                                  rows="3" 
+                                  placeholder="Provide detailed notes about this status change..."
+                                  required></textarea>
+                        <div class="form-text">
+                            This will be recorded in the case history for audit purposes
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-info-circle me-2 mt-1"></i>
+                            <div>
+                                <small>
+                                    <strong>Note:</strong> This action will be logged under your name and 
+                                    cannot be undone. Closed cases may be archived after 30 days.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-saps">
+                        <i class="fas fa-paper-plane me-2"></i>Update Status
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+    /* All existing styles remain unchanged */
+    .case-header {
+        background: linear-gradient(135deg, var(--saps-blue-light), #e6f0ff);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(0, 63, 135, 0.1);
+    }
+    .case-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+        border-radius: 50%;
+        transform: translate(100px, -100px);
+    }
+    .case-number-badge {
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+        padding: 0.5rem 1.2rem;
+        border-radius: 10px;
+        display: inline-block;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 4px 15px rgba(0, 63, 135, 0.2);
+        transition: all 0.3s;
+    }
+    .case-number-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 63, 135, 0.3);
+    }
+    .priority-indicator { position: relative; padding-left: 1.5rem; }
+    .priority-indicator::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+    .priority-high::before { background: #dc3545; }
+    .priority-medium::before { background: #ffc107; }
+    .priority-low::before { background: #28a745; }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
+        50% { opacity: 0.7; transform: translateY(-50%) scale(1.1); }
+    }
+    .case-detail-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0, 63, 135, 0.1);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+        position: relative;
+    }
+    .case-detail-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0, 63, 135, 0.15);
+        border-color: var(--saps-blue);
+    }
+    .case-detail-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, var(--saps-blue), var(--saps-gold));
+    }
+    .card-header-enhanced {
+        background: white;
+        border-bottom: 2px solid var(--saps-blue-light);
+        padding: 1.2rem 1.5rem;
+    }
+    .card-header-enhanced h5 {
+        color: var(--saps-blue);
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .timeline-enhanced {
+        position: relative;
+        padding-left: 2.5rem;
+        margin-top: 1rem;
+    }
+    .timeline-enhanced::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: linear-gradient(to bottom, var(--saps-blue), var(--saps-gold));
+        border-radius: 3px;
+    }
+    .timeline-item-enhanced {
+        position: relative;
+        margin-bottom: 2rem;
+        background: white;
+        border-radius: 12px;
+        padding: 1.2rem;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        transition: all 0.3s;
+    }
+    .timeline-item-enhanced:hover {
+        transform: translateX(5px);
+        border-color: var(--saps-blue);
+        box-shadow: 0 4px 15px rgba(0, 63, 135, 0.1);
+    }
+    .timeline-item-enhanced::before {
+        content: '';
+        position: absolute;
+        left: -2.35rem;
+        top: 1.5rem;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 0 0 3px var(--saps-blue);
+        background: var(--saps-blue);
+        z-index: 2;
+    }
+    .timeline-item-enhanced.status-change::before { 
+        background: var(--saps-gold);
+        box-shadow: 0 0 0 3px var(--saps-gold);
+    }
+    .timeline-item-enhanced.case-created::before { 
+        background: #28a745;
+        box-shadow: 0 0 0 3px #28a745;
+    }
+    .officer-card { text-align: center; padding: 1.5rem; }
+    .officer-avatar {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.2rem;
+        color: white;
+        font-size: 2rem;
+        border: 4px solid white;
+        box-shadow: 0 0 0 4px var(--saps-blue-light);
+        transition: all 0.3s;
+    }
+    .officer-card:hover .officer-avatar {
+        transform: scale(1.1) rotate(5deg);
+        box-shadow: 0 0 0 4px var(--saps-blue-light), 0 8px 25px rgba(0, 63, 135, 0.3);
+    }
+    .suspect-card {
+        border: 2px solid var(--saps-blue);
+        background: linear-gradient(135deg, #f8f9fc, white);
+    }
+    .suspect-photo-enhanced {
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        border: 4px solid var(--saps-blue);
+        box-shadow: 0 4px 20px rgba(0, 63, 135, 0.2);
+        margin: 0 auto 1.2rem;
+        overflow: hidden;
+        transition: all 0.3s;
+        position: relative;
+    }
+    .suspect-photo-enhanced:hover {
+        transform: scale(1.05);
+        border-color: var(--saps-gold);
+        box-shadow: 0 8px 30px rgba(0, 63, 135, 0.3);
+    }
+    .suspect-photo-enhanced img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .suspect-photo-enhanced .photo-placeholder {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, var(--saps-blue-light), #e6f0ff);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--saps-blue);
+    }
+    .action-btn {
+        padding: 0.6rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border: 2px solid transparent;
+    }
+    .action-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+    .status-modal-content {
+        border: none;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 63, 135, 0.3);
+    }
+    .status-option {
+        padding: 1rem;
+        border-radius: 10px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-bottom: 0.5rem;
+    }
+    .status-option:hover {
+        transform: translateX(5px);
+        background: rgba(0, 63, 135, 0.05);
+        border-color: var(--saps-blue-light);
+    }
+    .status-option.selected {
+        background: var(--saps-blue-light);
+        border-color: var(--saps-blue);
+    }
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    .info-item {
+        padding: 1.2rem;
+        background: rgba(0, 63, 135, 0.03);
+        border-radius: 12px;
+        border-left: 4px solid var(--saps-blue);
+        transition: all 0.3s;
+    }
+    .info-item:hover {
+        transform: translateY(-3px);
+        background: rgba(0, 63, 135, 0.08);
+        border-left-color: var(--saps-gold);
+    }
+
+    /* --- AGGRESSIVE FIX: Reduce gap in Assigned Officer card --- */
+    .assigned-officer-card .card-header-enhanced {
+        padding: 0.5rem 1.5rem !important; /* less padding around header */
+    }
+    .assigned-officer-card .card-body {
+        padding: 0.25rem 1.5rem 0.5rem !important; /* minimal top padding, slight bottom */
+    }
+    .assigned-officer-card .officer-card {
+        padding: 0 !important; /* remove inner padding */
+    }
+    .assigned-officer-card .officer-avatar {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 0.25rem; /* tiny space below avatar */
+        font-size: 1.2rem;
+        border-width: 3px;
+        box-shadow: 0 0 0 3px var(--saps-blue-light);
+    }
+    .assigned-officer-card .officer-card:hover .officer-avatar {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 3px var(--saps-blue-light), 0 4px 12px rgba(0,63,135,0.2);
+    }
+    .assigned-officer-card h4 {
+        margin-bottom: 0.15rem !important; /* reduce gap below name */
+    }
+    .assigned-officer-card .officer-card .text-gold {
+        margin-bottom: 0.5rem !important; /* reduce space below rank */
+    }
+
+    /* ===== NEW: Wrapper for Update Status button to make it stand out ===== */
+    .status-action-wrapper {
+        background: rgba(212, 175, 55, 0.12);
+        border-radius: 12px;
+        padding: 0.3rem;
+        box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.3);
+        transition: all 0.3s;
+        margin-bottom: 0.5rem;
+    }
+    .status-action-wrapper:hover {
+        background: rgba(212, 175, 55, 0.2);
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.5);
+        transform: scale(1.02);
+    }
+    /* Ensure the button inside the wrapper takes full width and has proper padding */
+    .status-action-wrapper .btn {
+        border-radius: 10px;
+        padding: 0.65rem 1.2rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        background: linear-gradient(135deg, #003f87, #002a5c);
+        border: none;
+        color: white;
+        transition: all 0.3s;
+    }
+    .status-action-wrapper .btn:hover {
+        background: linear-gradient(135deg, #004f9e, #003f87);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 63, 135, 0.3);
+    }
+
+    @media (max-width: 768px) {
+        .case-header { padding: 1.5rem; }
+        .timeline-enhanced { padding-left: 2rem; }
+        .timeline-item-enhanced::before { left: -2.1rem; }
+        .info-grid { grid-template-columns: 1fr; }
+        .status-action-wrapper {
+            margin-bottom: 0.3rem;
+        }
+    }
+</style>
+
+<script>
+    // Original scripts from view.html
+    document.addEventListener('DOMContentLoaded', function() {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
+        const currentStatus = '{{ case.status }}';
+        selectStatus(currentStatus);
+        const timelineItems = document.querySelectorAll('.timeline-item-enhanced');
+        timelineItems.forEach((item, index) => {
+            item.style.animationDelay = `${index * 0.1}s`;
+        });
+        const printBtn = document.querySelector('[onclick="window.print()"]');
+        printBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const printContents = document.querySelector('.container').innerHTML;
+            const originalContents = document.body.innerHTML;
+            document.body.innerHTML = `
+                <div class="container">
+                    <div class="text-center mb-4">
+                        <h3>SAPS eDocket - Case Document</h3>
+                        <p>Case: {{ case.case_number }} | Printed: ${new Date().toLocaleString()}</p>
+                        <hr>
+                    </div>
+                    ${printContents}
+                </div>
+            `;
+            window.print();
+            document.body.innerHTML = originalContents;
+            window.location.reload();
+        });
+    });
+
+    function selectStatus(status) {
+        document.querySelectorAll('.status-option').forEach(option => option.classList.remove('selected'));
+        const selectedOption = Array.from(document.querySelectorAll('.status-option')).find(option => {
+            return option.querySelector('h6').textContent.toLowerCase().includes(status);
+        });
+        if (selectedOption) selectedOption.classList.add('selected');
+        document.getElementById('selectedStatus').value = status;
+    }
+
+    document.getElementById('statusForm')?.addEventListener('submit', function(e) {
+        const notes = document.getElementById('statusNotes').value.trim();
+        if (!notes) {
+            e.preventDefault();
+            alert('Please provide notes for the status change.');
+            return false;
+        }
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Updating...';
+        submitBtn.disabled = true;
+        return true;
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}404 – Page Not Found | SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Page Not Found</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">404</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+            <!-- Error Icon -->
+            <div class="mb-5">
+                <div class="error-icon-wrapper d-inline-block position-relative">
+                    <div class="error-icon-bg bg-danger-subtle rounded-circle p-5">
+                        <i class="fas fa-compass fa-5x text-danger"></i>
+                    </div>
+                    <span class="position-absolute top-0 start-100 translate-middle badge bg-danger rounded-pill px-3 py-2">
+                        <i class="fas fa-exclamation-triangle me-1"></i> 404
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Error Message -->
+            <h1 class="display-4 fw-bold text-primary mb-3">
+                <i class="fas fa-map-signs me-2 text-danger"></i>Page Not Found
+            </h1>
+            <p class="lead text-muted mb-4">
+                The page you are looking for does not exist or may have been moved to a different location.
+            </p>
+            
+            <!-- Suggestions -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold text-primary mb-3">
+                        <i class="fas fa-lightbulb me-2 text-warning"></i>What you can try:
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded-3 hover-lift">
+                                <i class="fas fa-home text-primary fa-lg mb-2"></i>
+                                <div class="fw-semibold">Go Home</div>
+                                <small class="text-muted">Return to the homepage</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded-3 hover-lift">
+                                <i class="fas fa-search text-primary fa-lg mb-2"></i>
+                                <div class="fw-semibold">Search</div>
+                                <small class="text-muted">Find what you need</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded-3 hover-lift">
+                                <i class="fas fa-bug text-primary fa-lg mb-2"></i>
+                                <div class="fw-semibold">Report Issue</div>
+                                <small class="text-muted">Let us know about broken links</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                <a href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('main.index') }}" 
+                   class="btn btn-saps btn-lg px-5">
+                    <i class="fas fa-arrow-left me-2"></i>Return Home
+                </a>
+                <a href="{{ url_for('main.search') }}" class="btn btn-outline-primary btn-lg px-4">
+                    <i class="fas fa-search me-2"></i>Search the System
+                </a>
+            </div>
+            
+            <!-- Breadcrumb Help -->
+            <div class="mt-5 pt-4 border-top">
+                <p class="text-muted small">
+                    <i class="fas fa-info-circle me-1"></i>
+                    If you typed the URL, check the spelling. If you followed a link, it may be outdated.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .error-icon-bg {
+        background: linear-gradient(135deg, #ffebee, #ffcdd2);
+        transition: all 0.3s ease;
+    }
+    .error-icon-bg:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px rgba(220, 53, 69, 0.3);
+    }
+    .error-icon-bg i {
+        transition: transform 0.3s ease;
+    }
+    .error-icon-bg:hover i {
+        transform: rotate(15deg) scale(1.1);
+    }
+    .hover-lift {
+        transition: all 0.3s ease;
+        cursor: default;
+    }
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}

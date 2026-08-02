@@ -1,0 +1,642 @@
+{% extends "base.html" %}
+
+{% block title %}Case Management – SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Case Management</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">Cases</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Management Header -->
+    <div class="management-header">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-primary-gradient rounded-3 p-3 me-3">
+                        <i class="fas fa-gavel fa-2x text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="display-6 fw-bold text-primary mb-1">Case Management System</h1>
+                        <p class="lead text-dark mb-0">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            Monitor and manage all criminal cases under your jurisdiction
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <a href="{{ url_for('cases.create_case') }}" class="btn btn-saps btn-lg px-4 py-3">
+                    <i class="fas fa-plus-circle me-2"></i> Create New Case
+                </a>
+            </div>
+        </div>
+        
+        <!-- Quick Stats (now using real stats from the backend) -->
+        <div class="quick-stats">
+            <div class="quick-stat-item">
+                <div class="text-primary fw-bold display-6">{{ stats.total }}</div>
+                <div class="text-muted small">Total Cases</div>
+            </div>
+            <div class="quick-stat-item">
+                <div class="text-warning fw-bold display-6">{{ stats.open }}</div>
+                <div class="text-muted small">Open Cases</div>
+            </div>
+            <div class="quick-stat-item">
+                <div class="text-info fw-bold display-6">{{ stats.investigating }}</div>
+                <div class="text-muted small">Investigating</div>
+            </div>
+            <div class="quick-stat-item">
+                <div class="text-danger fw-bold display-6">{{ stats.high_priority }}</div>
+                <div class="text-muted small">High Priority</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <h5 class="fw-bold text-primary mb-3">
+            <i class="fas fa-filter me-2"></i>
+            Filter & Search Cases
+        </h5>
+        <form method="GET" id="filterForm" class="row g-3">
+            <div class="col-md-3 filter-group">
+                <label class="form-label small fw-semibold text-primary">Status</label>
+                <select name="status" class="form-select filter-select">
+                    <option value="">All Statuses</option>
+                    <option value="open" {% if request.args.get('status') == 'open' %}selected{% endif %}>Open</option>
+                    <option value="investigating" {% if request.args.get('status') == 'investigating' %}selected{% endif %}>Investigating</option>
+                    <option value="in_court" {% if request.args.get('status') == 'in_court' %}selected{% endif %}>In Court</option>
+                    <option value="closed" {% if request.args.get('status') == 'closed' %}selected{% endif %}>Closed</option>
+                </select>
+            </div>
+            <div class="col-md-3 filter-group">
+                <label class="form-label small fw-semibold text-primary">Severity</label>
+                <select name="severity" class="form-select filter-select">
+                    <option value="">All Severities</option>
+                    <option value="low" {% if request.args.get('severity') == 'low' %}selected{% endif %}>Low Priority</option>
+                    <option value="medium" {% if request.args.get('severity') == 'medium' %}selected{% endif %}>Medium Priority</option>
+                    <option value="high" {% if request.args.get('severity') == 'high' %}selected{% endif %}>High Priority</option>
+                </select>
+            </div>
+            <div class="col-md-3 filter-group">
+                <label class="form-label small fw-semibold text-primary">Category</label>
+                <select name="category" class="form-select filter-select">
+                    <option value="">All Categories</option>
+                    <option value="theft" {% if request.args.get('category') == 'theft' %}selected{% endif %}>Theft</option>
+                    <option value="assault" {% if request.args.get('category') == 'assault' %}selected{% endif %}>Assault</option>
+                    <option value="burglary" {% if request.args.get('category') == 'burglary' %}selected{% endif %}>Burglary</option>
+                    <option value="fraud" {% if request.args.get('category') == 'fraud' %}selected{% endif %}>Fraud</option>
+                    <option value="drugs" {% if request.args.get('category') == 'drugs' %}selected{% endif %}>Drug Related</option>
+                </select>
+            </div>
+            <div class="col-md-3 filter-group">
+                <label class="form-label small fw-semibold text-primary">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-blue-light border-end-0">
+                        <i class="fas fa-search text-primary"></i>
+                    </span>
+                    <input type="text" name="search" id="searchInput" class="form-control border-start-0" 
+                           placeholder="Case #, title, or suspect..." 
+                           value="{{ request.args.get('search', '') }}">
+                </div>
+            </div>
+            <div class="col-12 mt-2">
+                <div class="d-flex justify-content-between">
+                    <button type="reset" class="btn btn-outline-secondary" onclick="resetFilters()">
+                        <i class="fas fa-undo me-2"></i>Reset Filters
+                    </button>
+                    <button type="submit" class="btn filter-btn" id="applyFiltersBtn">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Cases Grid -->
+    <div class="row g-4" id="casesGrid">
+        {% for case in cases.items %}
+        <div class="col-md-6 col-lg-4 case-grid-item">
+            <div class="case-card-enhanced">
+                <!-- Case Header -->
+                <div class="case-card-header">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="case-number-badge">
+                            <i class="fas fa-hashtag"></i>
+                            {{ case.case_number }}
+                        </div>
+                        <div class="case-status-badge status-{{ case.status }}">
+                            {{ case.status.replace('_', ' ')|title }}
+                        </div>
+                    </div>
+                    
+                    <h5 class="fw-bold mb-3">{{ case.title }}</h5>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="case-severity-indicator severity-{{ case.severity }}">
+                            <i class="fas fa-{{ 'fire' if case.severity == 'high' else 'exclamation-triangle' if case.severity == 'medium' else 'info-circle' }}"></i>
+                            {{ case.severity|title }} Priority
+                        </span>
+                        <span class="text-muted small">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            {{ case.created_at.strftime('%d %b %Y') }}
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Case Body -->
+                <div class="p-4">
+                    <p class="text-muted mb-3">{{ case.description[:120] }}{% if case.description|length > 120 %}...{% endif %}</p>
+                    
+                    <!-- Suspect Information -->
+                    <div class="case-suspect-info">
+                        <div class="d-flex align-items-center">
+                            <div class="suspect-avatar">
+                                {{ case.suspect.first_name[0] if case.suspect else '?' }}{{ case.suspect.last_name[0] if case.suspect and case.suspect.last_name else '' }}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold">{{ case.suspect.full_name if case.suspect else 'Suspect Not Identified' }}</div>
+                                {% if case.suspect %}
+                                <div class="small text-muted">
+                                    <i class="fas fa-id-card me-1"></i>
+                                    {{ case.suspect.id_number }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Case Progress -->
+                    <div class="case-progress">
+                        {% set progress = {'open': 25, 'investigating': 65, 'in_court': 85, 'closed': 100} %}
+                        <div class="case-progress-bar" style="width: {{ progress.get(case.status, 25) }}%;"></div>
+                    </div>
+                    
+                    <!-- Case Details -->
+                    <div class="row small text-muted g-2 mt-3">
+                        <div class="col-6">
+                            <i class="fas fa-tag me-1"></i>
+                            {{ case.category|title }}
+                        </div>
+                        <div class="col-6 text-end">
+                            <i class="fas fa-map-marker-alt me-1"></i>
+                            {% if case.location %}
+                                {{ case.location[:15] }}{% if case.location|length > 15 %}...{% endif %}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                        <div class="col-6">
+                            <i class="fas fa-user-tie me-1"></i>
+                            {{ case.assigned_officer.first_name[:10] if case.assigned_officer else 'Unassigned' }}...
+                        </div>
+                        <div class="col-6 text-end">
+                            <i class="fas fa-clock me-1"></i>
+                            {% if case.created_at %}
+                                {{ ((now - case.created_at).days) }}d ago
+                            {% else %}
+                                Unknown
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="case-actions">
+                        <a href="{{ url_for('cases.view_case', case_id=case.id) }}" 
+                           class="case-action-btn action-primary">
+                            <i class="fas fa-eye"></i>
+                            <span class="d-none d-md-inline">View Details</span>
+                        </a>
+                        {% if case.can_be_modified_by(current_user) %}
+                        <form method="POST" action="{{ url_for('cases.update_case_status', case_id=case.id) }}" class="d-inline w-100">
+                            <button type="submit" class="case-action-btn action-secondary border-0 w-100">
+                                <i class="fas fa-edit"></i>
+                                <span class="d-none d-md-inline">Update</span>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <h3 class="fw-bold text-primary mb-3">No Cases Found</h3>
+                <p class="text-muted mb-4">
+                    {% if request.args %}
+                        No cases match your current filters. Try adjusting your search criteria.
+                    {% else %}
+                        You haven't created any cases yet. Start by filing your first case.
+                    {% endif %}
+                </p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{{ url_for('cases.create_case') }}" class="btn btn-saps px-4">
+                        <i class="fas fa-plus-circle me-2"></i>Create First Case
+                    </a>
+                    {% if request.args %}
+                    <a href="{{ url_for('cases.view_cases') }}" class="btn btn-outline-primary px-4">
+                        <i class="fas fa-undo me-2"></i>Clear Filters
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if cases.pages > 1 %}
+    <div class="pagination-enhanced">
+        <nav aria-label="Case pagination">
+            <ul class="pagination justify-content-center">
+                {% if cases.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('cases.view_cases', page=cases.prev_num, **request.args) }}">
+                        <i class="fas fa-chevron-left me-1"></i> Previous
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in cases.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
+                    {% if page_num %}
+                        <li class="page-item {% if page_num == cases.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('cases.view_cases', page=page_num, **request.args) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if cases.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('cases.view_cases', page=cases.next_num, **request.args) }}">
+                        Next <i class="fas fa-chevron-right ms-1"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+            <p class="text-center text-muted small mt-2">
+                Showing {{ cases.items|length }} of {{ cases.total }} cases
+            </p>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Styles -->
+<style>
+    .management-header {
+        background: linear-gradient(135deg, rgba(0, 63, 135, 0.05) 0%, rgba(212, 175, 55, 0.03) 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid rgba(0, 63, 135, 0.1);
+        position: relative;
+        overflow: hidden;
+    }
+    .management-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+        z-index: 0;
+    }
+    .case-stat-card {
+        background: white;
+        border: none;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0, 63, 135, 0.08);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+        border-left: 4px solid var(--saps-blue);
+    }
+    .case-stat-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 63, 135, 0.15);
+        border-left-color: var(--saps-gold);
+    }
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, var(--saps-blue-light), rgba(0, 63, 135, 0.1));
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--saps-blue);
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    .case-stat-card:hover .stat-icon {
+        transform: rotate(15deg) scale(1.1);
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+    }
+    .filter-section {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0, 63, 135, 0.08);
+        margin-bottom: 2rem;
+        border: 1px solid rgba(0, 63, 135, 0.1);
+        transition: all 0.3s ease;
+    }
+    .filter-section:hover {
+        box-shadow: 0 8px 30px rgba(0, 63, 135, 0.12);
+        border-color: var(--saps-blue);
+    }
+    .filter-group .form-control, .filter-group .form-select {
+        background: #f8fafc;
+        border: 2px solid #e6f0ff;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.3s;
+    }
+    .filter-group .form-control:focus, .filter-group .form-select:focus {
+        background: white;
+        border-color: var(--saps-blue);
+        box-shadow: 0 0 0 0.25rem rgba(0, 63, 135, 0.15);
+        transform: translateY(-1px);
+    }
+    .filter-btn {
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .filter-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 63, 135, 0.3);
+    }
+    .case-grid-item {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .case-grid-item:hover {
+        transform: translateY(-8px);
+    }
+    .case-card-enhanced {
+        background: white;
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 63, 135, 0.08);
+        height: 100%;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        border-top: 4px solid transparent;
+    }
+    .case-card-enhanced:hover {
+        box-shadow: 0 20px 40px rgba(0, 63, 135, 0.15);
+        border-top-color: var(--saps-gold);
+    }
+    .case-card-header {
+        background: linear-gradient(135deg, rgba(0, 63, 135, 0.05), rgba(212, 175, 55, 0.03));
+        padding: 1.5rem;
+        border-bottom: 1px solid rgba(0, 63, 135, 0.1);
+    }
+    .case-number-badge {
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .case-status-badge {
+        padding: 0.5rem 1.2rem;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .case-severity-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+    .severity-high {
+        background: linear-gradient(135deg, #ff5252, #d32f2f);
+        color: white;
+    }
+    .severity-medium {
+        background: linear-gradient(135deg, #ffb74d, #f57c00);
+        color: white;
+    }
+    .severity-low {
+        background: linear-gradient(135deg, #4fc3f7, #0288d1);
+        color: white;
+    }
+    .case-suspect-info {
+        background: linear-gradient(135deg, rgba(0, 63, 135, 0.05), transparent);
+        padding: 1rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+        border: 1px solid rgba(0, 63, 135, 0.1);
+    }
+    .suspect-avatar {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+    .case-progress {
+        height: 6px;
+        background: #e6f0ff;
+        border-radius: 3px;
+        overflow: hidden;
+        margin: 1rem 0;
+    }
+    .case-progress-bar {
+        height: 100%;
+        border-radius: 3px;
+        background: linear-gradient(90deg, var(--saps-blue), var(--saps-gold));
+        transition: width 1s ease;
+    }
+    .case-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+    }
+    .case-action-btn {
+        flex: 1;
+        text-align: center;
+        padding: 0.75rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    .case-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    .action-primary {
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+    }
+    .action-secondary {
+        background: linear-gradient(135deg, var(--saps-gold), #c9a227);
+        color: var(--saps-black);
+    }
+    .pagination-enhanced { margin-top: 3rem; }
+    .page-item .page-link {
+        border: none;
+        border-radius: 10px;
+        margin: 0 5px;
+        color: var(--saps-blue);
+        font-weight: 600;
+        transition: all 0.3s ease;
+        min-width: 40px;
+        text-align: center;
+        background: white;
+        box-shadow: 0 2px 10px rgba(0, 63, 135, 0.05);
+    }
+    .page-item .page-link:hover {
+        background: var(--saps-blue-light);
+        color: var(--saps-blue);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 63, 135, 0.1);
+    }
+    .page-item.active .page-link {
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+        box-shadow: 0 5px 15px rgba(0, 63, 135, 0.2);
+    }
+    .empty-state {
+        background: linear-gradient(135deg, rgba(0, 63, 135, 0.05), rgba(212, 175, 55, 0.03));
+        border-radius: 20px;
+        padding: 4rem 2rem;
+        text-align: center;
+        border: 2px dashed rgba(0, 63, 135, 0.1);
+    }
+    .empty-icon {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, var(--saps-blue-light), rgba(0, 63, 135, 0.1));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 2rem;
+        font-size: 2.5rem;
+        color: var(--saps-blue);
+    }
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    .quick-stat-item {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0, 63, 135, 0.05);
+        border: 1px solid rgba(0, 63, 135, 0.1);
+    }
+    @media (max-width: 768px) {
+        .management-header { padding: 1.5rem; }
+        .case-actions { flex-direction: column; }
+        .quick-stats { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>
+
+<script>
+    // Auto-submit the filter form when any dropdown changes or when search input changes (with debounce)
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('filterForm');
+        const selects = document.querySelectorAll('.filter-select');
+        const searchInput = document.getElementById('searchInput');
+        let searchTimeout = null;
+
+        // For select dropdowns – submit immediately on change
+        selects.forEach(select => {
+            select.addEventListener('change', function() {
+                form.submit();
+            });
+        });
+
+        // For search input – submit after 500ms of inactivity (debounce)
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    form.submit();
+                }, 500);
+            });
+        }
+
+        // The "Apply Filters" button still works normally.
+        // The "Reset Filters" button uses the resetFilters() function below.
+    });
+
+    // Reset filters: go to the cases page without any query parameters
+    function resetFilters() {
+        window.location.href = "{{ url_for('cases.view_cases') }}";
+    }
+
+    // Animation for case cards on scroll (kept from original)
+    document.addEventListener('DOMContentLoaded', function() {
+        const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -100px 0px' };
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate__animated', 'animate__fadeInUp');
+                }
+            });
+        }, observerOptions);
+        document.querySelectorAll('.case-grid-item').forEach(card => {
+            observer.observe(card);
+        });
+    });
+</script>
+{% endblock %}

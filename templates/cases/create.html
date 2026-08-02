@@ -1,0 +1,728 @@
+{% extends "base.html" %}
+
+{% block title %}Create New Case – SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Create New Case</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="{{ url_for('cases.view_cases') }}" class="h5 text-white">Cases</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">Create</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4"><i class="fas fa-folder-plus me-2"></i>Create New Case</h2>
+            
+            <!-- Progress Steps -->
+            <div class="step-indicator mb-4">
+                <div class="step active" data-step="1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Suspect Info</div>
+                </div>
+                <div class="step" data-step="2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Case Details</div>
+                </div>
+                <div class="step" data-step="3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Review & Submit</div>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ url_for('cases.create_case') }}" enctype="multipart/form-data" id="caseForm">
+                {{ case_form.hidden_tag() }}
+                {{ suspect_form.hidden_tag() }}
+                
+                <!-- Hidden field for existing suspect -->
+                <input type="hidden" id="useExistingSuspect" name="use_existing_suspect" value="{{ prefill_suspect.id if prefill_suspect else '' }}">
+                
+                <!-- Section 1: Suspect Information -->
+                <div class="card form-section mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-user me-2"></i>Suspect Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Warning Alert for Existing Suspect -->
+                        {% if prefill_suspect %}
+                        <div class="alert alert-info mb-4">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-info-circle fa-2x me-3"></i>
+                                <div>
+                                    <strong>Existing Suspect Detected</strong>
+                                    <p class="mb-0">All suspect information is pre-filled from the existing profile. Fields are locked to prevent accidental changes.</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <!-- ID Number Input -->
+                            <div class="col-md-6 mb-3">
+                                <label for="idNumber" class="form-label">ID Number *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="idNumber" 
+                                           name="id_number" 
+                                           maxlength="13" 
+                                           placeholder="Enter 13-digit ID number"
+                                           value="{{ suspect_form.id_number.data or '' }}"
+                                           {% if prefill_suspect %}readonly{% endif %}>
+                                </div>
+                                <small class="text-muted">First 6 digits = YYMMDD (auto‑fills DOB)</small>
+                            </div>
+                            
+                            <!-- Status/Warning Message -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Status</label>
+                                <div id="currentStatus" class="p-3 rounded-3 bg-light">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-info-circle text-info me-2"></i>
+                                        <div>
+                                            <strong>Check for Existing Records</strong>
+                                            <p class="mb-0 small text-muted">
+                                                To verify if this suspect has pending cases or criminal history, 
+                                                enter the ID number above or search by name in 
+                                                <a href="{{ url_for('suspects.search_suspects') }}">Suspect Database</a>.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div> 
+
+                        <!-- Suspect Name Fields -->
+                        <div class="row suspect-fields">
+                            <div class="col-md-6 mb-3">
+                                <label for="suspectFirstName" class="form-label">First Name *</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="suspectFirstName" 
+                                       name="first_name" 
+                                       value="{{ suspect_form.first_name.data or '' }}"
+                                       required
+                                       {% if prefill_suspect %}readonly{% endif %}>
+                                <div class="invalid-feedback">Please enter the suspect's first name.</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="suspectLastName" class="form-label">Last Name *</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="suspectLastName" 
+                                       name="last_name" 
+                                       value="{{ suspect_form.last_name.data or '' }}"
+                                       required
+                                       {% if prefill_suspect %}readonly{% endif %}>
+                                <div class="invalid-feedback">Please enter the suspect's last name.</div>
+                            </div>
+                        </div>
+
+                        <div class="row suspect-fields">
+                            <div class="col-md-6 mb-3">
+                                <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                                <input type="date" 
+                                       class="form-control" 
+                                       id="dateOfBirth" 
+                                       name="date_of_birth" 
+                                       value="{{ suspect_form.date_of_birth.data or '' }}"
+                                       {% if prefill_suspect %}readonly{% endif %}>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="gender" class="form-label">Gender</label>
+                                <select class="form-select" id="gender" name="gender" {% if prefill_suspect %}disabled{% endif %}>
+                                    <option value="">Select Gender</option>
+                                    <option value="male" {% if suspect_form.gender.data == 'male' %}selected{% endif %}>Male</option>
+                                    <option value="female" {% if suspect_form.gender.data == 'female' %}selected{% endif %}>Female</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row suspect-fields">
+                            <div class="col-md-6 mb-3">
+                                <label for="address" class="form-label">Address</label>
+                                <textarea class="form-control" 
+                                          id="address" 
+                                          name="address" 
+                                          rows="2"
+                                          {% if prefill_suspect %}readonly{% endif %}>{{ suspect_form.address.data or '' }}</textarea>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="contactNumber" class="form-label">Contact Number</label>
+                                <input type="tel" 
+                                       class="form-control" 
+                                       id="contactNumber" 
+                                       name="contact_number" 
+                                       value="{{ suspect_form.contact_number.data or '' }}"
+                                       maxlength="10"
+                                       pattern="[0-9]*"
+                                       placeholder="Only digits, max 10"
+                                       {% if prefill_suspect %}readonly{% endif %}>
+                                <small class="text-muted"></small>
+                            </div>
+                        </div>
+
+                        <!-- Photo Upload (only for new suspects) -->
+                        {% if not prefill_suspect %}
+                        <div class="row mt-3" id="photoUploadSection">
+                            <div class="col-12">
+                                <label class="form-label">Suspect Photo (Optional)</label>
+                                <div class="upload-area border rounded p-4 text-center" 
+                                     style="border-style: dashed; cursor: pointer;">
+                                    <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                                    <p class="mb-1">Drag & drop photo here or click to browse</p>
+                                    <small class="text-muted">Supports: JPG, PNG | Max: 5MB</small>
+                                    <input type="file" 
+                                           id="photoInput" 
+                                           name="photo" 
+                                           accept="image/*" 
+                                           style="display: none;">
+                                </div>
+                                <div id="photoPreview" class="mt-3 text-center" style="display: none;">
+                                    <img id="previewImage" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px;">
+                                    <button type="button" class="btn btn-sm btn-danger mt-2" onclick="removePhoto()">
+                                        <i class="fas fa-times me-1"></i>Remove Photo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Suspect information is pre-filled from existing profile. Photo cannot be changed here.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Section 2: Case Details -->
+                <div class="card form-section mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-folder-open me-2"></i>Case Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="title" class="form-label">Case Title *</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="title" 
+                                       name="title" 
+                                       value="{{ case_form.title.data or '' }}"
+                                       required>
+                                <div class="invalid-feedback">Please enter a case title.</div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="category" class="form-label">Category *</label>
+                                <select class="form-select" id="category" name="category" required>
+                                    <option value="">Select Category</option>
+                                    <!-- Schedule 1 -->
+                                    <optgroup label="Schedule 1">
+                                        <option value="theft" {% if case_form.category.data == 'theft' %}selected{% endif %}>Theft</option>
+                                        <option value="burglary" {% if case_form.category.data == 'burglary' %}selected{% endif %}>Burglary</option>
+                                        <option value="vandalism" {% if case_form.category.data == 'vandalism' %}selected{% endif %}>Vandalism</option>
+                                        <option value="vehicle_theft" {% if case_form.category.data == 'vehicle_theft' %}selected{% endif %}>Vehicle Theft</option>
+                                        <option value="fraud" {% if case_form.category.data == 'fraud' %}selected{% endif %}>Fraud</option>
+                                        <option value="corruption" {% if case_form.category.data == 'corruption' %}selected{% endif %}>Corruption</option>
+                                    </optgroup>
+                                    <!-- Schedule 2 -->
+                                    <optgroup label="Schedule 2">
+                                        <option value="assault" {% if case_form.category.data == 'assault' %}selected{% endif %}>Assault</option>
+                                        <option value="robbery" {% if case_form.category.data == 'robbery' %}selected{% endif %}>Robbery</option>
+                                        <option value="domestic_violence" {% if case_form.category.data == 'domestic_violence' %}selected{% endif %}>Domestic Violence</option>
+                                        <option value="drugs" {% if case_form.category.data == 'drugs' %}selected{% endif %}>Drug Related</option>
+                                        <option value="cybercrime" {% if case_form.category.data == 'cybercrime' %}selected{% endif %}>Cybercrime</option>
+                                        <option value="arson" {% if case_form.category.data == 'arson' %}selected{% endif %}>Arson</option>
+                                    </optgroup>
+                                    <!-- Schedule 3 -->
+                                    <optgroup label="Schedule 3">
+                                        <option value="sexual_assault" {% if case_form.category.data == 'sexual_assault' %}selected{% endif %}>Sexual Assault</option>
+                                        <option value="homicide" {% if case_form.category.data == 'homicide' %}selected{% endif %}>Homicide</option>
+                                        <option value="kidnapping" {% if case_form.category.data == 'kidnapping' %}selected{% endif %}>Kidnapping</option>
+                                    </optgroup>
+                                    <!-- Other -->
+                                    <optgroup label="Other">
+                                        <option value="other" {% if case_form.category.data == 'other' %}selected{% endif %}>Other (specify in description)</option>
+                                    </optgroup>
+                                </select>
+                                <div class="invalid-feedback">Please select a category.</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="severity" class="form-label">Severity *</label>
+                                <select class="form-select" id="severity" name="severity" required>
+                                    <option value="">Select Severity</option>
+                                    <option value="low" {% if case_form.severity.data == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if case_form.severity.data == 'medium' %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if case_form.severity.data == 'high' %}selected{% endif %}>High</option>
+                                    <option value="critical" {% if case_form.severity.data == 'critical' %}selected{% endif %}>Critical</option>
+                                </select>
+                                <div class="invalid-feedback">Please select a severity level.</div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="location" class="form-label">Incident Location</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="location" 
+                                       name="location" 
+                                       value="{{ case_form.location.data or '' }}"
+                                       placeholder="e.g., Main Street, Johannesburg">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="incident_date" class="form-label">Incident Date</label>
+                                <input type="datetime-local" 
+                                       class="form-control" 
+                                       id="incident_date" 
+                                       name="incident_date" 
+                                       value="{{ case_form.incident_date.data or '' }}"
+                                       max="{{ now.isoformat() if now else '' }}">
+                                <small class="text-muted">Cannot be a future date</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="description" class="form-label">Case Description *</label>
+                                <textarea class="form-control" 
+                                          id="description" 
+                                          name="description" 
+                                          rows="4" 
+                                          placeholder="Provide detailed description of the incident..."
+                                          required>{{ case_form.description.data or '' }}</textarea>
+                                <div class="invalid-feedback">Please provide a case description.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('cases.view_cases') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Cases
+                    </a>
+                    <button type="submit" name="create_case" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save me-1"></i>Create Case
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <style>
+        .step-indicator { display: flex; justify-content: space-between; position: relative; margin-bottom: 30px; }
+        .step { flex: 1; text-align: center; position: relative; cursor: pointer; padding: 10px; }
+        .step:not(:last-child)::after { content: ''; position: absolute; top: 25px; left: 50%; width: 100%; height: 2px; background: #dee2e6; z-index: -1; }
+        .step.completed:not(:last-child)::after { background: #28a745; }
+        .step-number { width: 50px; height: 50px; border-radius: 50%; background: #dee2e6; color: #6c757d; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-weight: bold; transition: all 0.3s; }
+        .step.active .step-number { background: #007bff; color: white; }
+        .step.completed .step-number { background: #28a745; color: white; }
+        .step-label { font-size: 0.9rem; color: #6c757d; }
+        .step.active .step-label { color: #007bff; font-weight: bold; }
+        .upload-area:hover { background-color: #f8f9fa; }
+        .upload-area.dragover { background-color: #e3f2fd; border-color: #2196f3 !important; }
+        input[readonly], textarea[readonly], select[disabled] {
+            background-color: #f8f9fa !important;
+            color: #6c757d !important;
+            border-color: #dee2e6 !important;
+            cursor: not-allowed !important;
+        }
+        #currentStatus { border-left: 4px solid; transition: all 0.3s ease; }
+        #currentStatus.using-existing { border-left-color: #28a745; background-color: rgba(40, 167, 69, 0.1); }
+        #currentStatus.new-suspect { border-left-color: #ffc107; background-color: rgba(255, 193, 7, 0.1); }
+        #currentStatus.unknown { border-left-color: #6c757d; background-color: rgba(108, 117, 125, 0.1); }
+        /* Style optgroup labels to stand out */
+        select optgroup { font-weight: bold; font-style: normal; color: #0d6efd; }
+        select optgroup option { font-weight: normal; color: #212529; }
+    </style>
+
+    <script>
+        // ============================================================
+        // 1. ID Number -> Date of Birth Auto-fill
+        // ============================================================
+        const idInput = document.getElementById('idNumber');
+        const dobInput = document.getElementById('dateOfBirth');
+
+        function parseDOBFromID(id) {
+            if (!id || id.length < 6) return null;
+            const yy = parseInt(id.substring(0, 2), 10);
+            const mm = parseInt(id.substring(2, 4), 10) - 1; // month is 0-indexed
+            const dd = parseInt(id.substring(4, 6), 10);
+            if (isNaN(yy) || isNaN(mm) || isNaN(dd)) return null;
+            
+            // Determine century using cutoff: if yy > current year's last two digits => 1900, else 2000
+            const now = new Date();
+            const currentYY = now.getFullYear() % 100;
+            const year = (yy > currentYY) ? 1900 + yy : 2000 + yy;
+            
+            const dateObj = new Date(year, mm, dd);
+            // Check if the date is valid (month/day rollover would change the object)
+            if (dateObj.getFullYear() !== year || dateObj.getMonth() !== mm || dateObj.getDate() !== dd) {
+                return null; // invalid date
+            }
+            return dateObj;
+        }
+
+        function formatDateForInput(date) {
+            if (!date) return '';
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        idInput.addEventListener('input', function(e) {
+            if (this.readOnly) return;
+            const val = this.value.replace(/\D/g, '');
+            if (val.length >= 6) {
+                const date = parseDOBFromID(val);
+                if (date) {
+                    dobInput.value = formatDateForInput(date);
+                    dobInput.classList.remove('is-invalid');
+                } else {
+                    dobInput.value = '';
+                    dobInput.classList.add('is-invalid');
+                    showToast('Invalid date of birth from ID number. Please check.', 'warning');
+                }
+            } else {
+                if (!this.readOnly) {
+                    dobInput.value = '';
+                    dobInput.classList.remove('is-invalid');
+                }
+            }
+        });
+
+        // ============================================================
+        // 2. Category -> Severity Auto-fill (updated mapping)
+        // ============================================================
+        const categorySelect = document.getElementById('category');
+        const severitySelect = document.getElementById('severity');
+
+        const severityMapping = {
+            'theft': 'low',
+            'burglary': 'medium',
+            'vandalism': 'low',
+            'vehicle_theft': 'medium',
+            'fraud': 'medium',
+            'corruption': 'high',
+            'assault': 'medium',
+            'robbery': 'high',
+            'domestic_violence': 'high',
+            'drugs': 'high',
+            'cybercrime': 'medium',
+            'arson': 'high',
+            'sexual_assault': 'critical',
+            'homicide': 'critical',
+            'kidnapping': 'critical',
+            'other': 'low'
+        };
+
+        categorySelect.addEventListener('change', function() {
+            const cat = this.value;
+            if (cat && severityMapping[cat]) {
+                severitySelect.value = severityMapping[cat];
+                severitySelect.dispatchEvent(new Event('change'));
+            }
+        });
+
+        // ============================================================
+        // 3. Incident Date – Max = Today
+        // ============================================================
+        const incidentDateInput = document.getElementById('incident_date');
+        if (incidentDateInput) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const maxDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            incidentDateInput.setAttribute('max', maxDateTime);
+        }
+
+        // ============================================================
+        // 4. Phone Number – Only Digits, max 10
+        // ============================================================
+        const phoneInput = document.getElementById('contactNumber');
+        phoneInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/\D/g, '').slice(0, 10);
+        });
+
+        // ============================================================
+        // 5. Existing Suspect Logic (kept from original)
+        // ============================================================
+        let foundSuspect = null;
+        let isUsingExistingSuspect = {{ 'true' if prefill_suspect else 'false' }};
+
+        function showToast(message, type = 'info') {
+            const existingToasts = document.querySelectorAll('.custom-toast');
+            existingToasts.forEach(toast => toast.remove());
+            const toast = document.createElement('div');
+            toast.className = `custom-toast alert alert-${type} alert-dismissible fade show position-fixed`;
+            toast.style.cssText = `top: 20px; right: 20px; z-index: 9999; min-width: 300px; animation: slideInRight 0.3s ease-out;`;
+            const icon = type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : type === 'danger' ? 'exclamation-circle' : 'info-circle';
+            toast.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-${icon} me-2"></i><div class="flex-grow-1">${message}</div><button type="button" class="btn-close ms-2" onclick="this.parentElement.parentElement.remove()"></button></div>`;
+            document.body.appendChild(toast);
+            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 5000);
+        }
+
+        async function checkSuspect() {
+            const idNumber = document.getElementById('idNumber').value.trim();
+            if (idNumber.length !== 13) {
+                showToast('Please enter a valid 13-digit ID number', 'warning');
+                return;
+            }
+            if (document.getElementById('useExistingSuspect').value) {
+                showToast('Already using existing suspect profile', 'info');
+                return;
+            }
+            const checkBtn = document.getElementById('checkBtn');
+            const loadingDiv = document.getElementById('checkLoading');
+            checkBtn.disabled = true;
+            loadingDiv.style.display = 'block';
+            document.getElementById('suspectFoundAlert').style.display = 'none';
+            document.getElementById('suspectNotFoundAlert').style.display = 'none';
+
+            try {
+                const response = await fetch('/api/check-suspect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_number: idNumber })
+                });
+                const data = await response.json();
+                if (data.exists) {
+                    foundSuspect = data.suspect;
+                    const alertDiv = document.getElementById('suspectFoundAlert');
+                    const detailsDiv = document.getElementById('suspectDetails');
+                    detailsDiv.innerHTML = `
+                        <div class="mb-1"><strong>Name:</strong> ${data.suspect.full_name}</div>
+                        <div class="mb-1"><strong>Active Cases:</strong> ${data.suspect.active_cases}</div>
+                        <div class="mb-1"><strong>Date of Birth:</strong> ${data.suspect.date_of_birth || 'Not specified'}</div>
+                        <div class="mb-1"><strong>Gender:</strong> ${data.suspect.gender ? data.suspect.gender.charAt(0).toUpperCase() + data.suspect.gender.slice(1) : 'Not specified'}</div>
+                    `;
+                    alertDiv.style.display = 'block';
+                    const useBtn = document.getElementById('useExistingBtn');
+                    if (useBtn) useBtn.onclick = useExistingSuspect;
+                    showToast('Suspect found in database! You can use existing profile.', 'success');
+                    updateStatusIndicator('found');
+                } else {
+                    document.getElementById('suspectNotFoundAlert').style.display = 'block';
+                    foundSuspect = null;
+                    enableSuspectFields();
+                    updateStatusIndicator('new');
+                    showToast('No existing suspect found. Please fill in suspect details.', 'info');
+                }
+            } catch (error) {
+                console.error('Error checking suspect:', error);
+                showToast('Error checking suspect. Please try again.', 'danger');
+            } finally {
+                checkBtn.disabled = false;
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        function useExistingSuspect() {
+            if (!foundSuspect) return;
+            document.getElementById('suspectFirstName').value = foundSuspect.first_name || '';
+            document.getElementById('suspectLastName').value = foundSuspect.last_name || '';
+            document.getElementById('idNumber').value = foundSuspect.id_number || '';
+            document.getElementById('dateOfBirth').value = foundSuspect.date_of_birth || '';
+            document.getElementById('gender').value = foundSuspect.gender || '';
+            document.getElementById('address').value = foundSuspect.address || '';
+            document.getElementById('contactNumber').value = foundSuspect.contact_number || '';
+            document.getElementById('useExistingSuspect').value = foundSuspect.id;
+            lockSuspectFields();
+            const photoUploadSection = document.getElementById('photoUploadSection');
+            if (photoUploadSection) photoUploadSection.style.display = 'none';
+            document.getElementById('suspectFoundAlert').innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <div class="flex-grow-1">
+                        <strong>Using existing suspect profile:</strong> ${foundSuspect.full_name}
+                        <div class="small text-muted">All suspect fields are now locked. Photo will be used from existing profile.</div>
+                    </div>
+                </div>
+            `;
+            updateStatusIndicator('using');
+            showToast('Using existing suspect profile. Fields have been locked.', 'success');
+        }
+
+        function lockSuspectFields() {
+            const fields = ['suspectFirstName', 'suspectLastName', 'idNumber', 'dateOfBirth', 'gender', 'address', 'contactNumber'];
+            fields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    if (field.tagName === 'SELECT') field.disabled = true;
+                    else field.readOnly = true;
+                    field.classList.add('bg-light', 'text-muted');
+                }
+            });
+            isUsingExistingSuspect = true;
+        }
+
+        function enableSuspectFields() {
+            const fields = ['suspectFirstName', 'suspectLastName', 'idNumber', 'dateOfBirth', 'gender', 'address', 'contactNumber'];
+            fields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    if (field.tagName === 'SELECT') field.disabled = false;
+                    else field.readOnly = false;
+                    field.classList.remove('bg-light', 'text-muted');
+                }
+            });
+            const photoUploadSection = document.getElementById('photoUploadSection');
+            if (photoUploadSection) photoUploadSection.style.display = 'block';
+            document.getElementById('useExistingSuspect').value = '';
+            isUsingExistingSuspect = false;
+        }
+
+        function updateStatusIndicator(status) {
+            const statusDiv = document.getElementById('currentStatus');
+            const indicators = {
+                'using': { html: `<div class="d-flex align-items-center"><i class="fas fa-check-circle text-success me-2"></i><div><strong>Using existing suspect profile</strong><p class="mb-0 small text-muted">All fields are locked</p></div></div>`, className: 'p-3 rounded-3 using-existing' },
+                'found': { html: `<div class="d-flex align-items-center"><i class="fas fa-user-check text-warning me-2"></i><div><strong>Suspect found in database</strong><p class="mb-0 small text-muted">Click "Use this profile" to autofill</p></div></div>`, className: 'p-3 rounded-3 new-suspect' },
+                'new': { html: `<div class="d-flex align-items-center"><i class="fas fa-user-plus text-primary me-2"></i><div><strong>Creating new suspect profile</strong><p class="mb-0 small text-muted">Fill in suspect details below</p></div></div>`, className: 'p-3 rounded-3 new-suspect' },
+                'unknown': { html: `<div class="d-flex align-items-center"><i class="fas fa-question-circle text-warning me-2"></i><div><strong>Suspect status: Unknown</strong><p class="mb-0 small text-muted">Check ID number or enter new details</p></div></div>`, className: 'p-3 rounded-3 unknown' }
+            };
+            const indicator = indicators[status] || indicators['unknown'];
+            statusDiv.innerHTML = indicator.html;
+            statusDiv.className = indicator.className;
+        }
+
+        function removePhoto() {
+            document.getElementById('photoInput').value = '';
+            document.getElementById('photoPreview').style.display = 'none';
+            showToast('Photo removed', 'info');
+        }
+
+        // ============================================================
+        // 6. DOM Ready – attach event listeners and handle prefill
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkBtn = document.getElementById('checkBtn');
+            if (checkBtn) checkBtn.addEventListener('click', checkSuspect);
+
+            const uploadArea = document.querySelector('.upload-area');
+            const photoInput = document.getElementById('photoInput');
+            if (uploadArea && photoInput) {
+                uploadArea.addEventListener('click', () => photoInput.click());
+                uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+                uploadArea.addEventListener('dragleave', () => { uploadArea.classList.remove('dragover'); });
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    if (e.dataTransfer.files.length) {
+                        photoInput.files = e.dataTransfer.files;
+                        handlePhotoUpload(e.dataTransfer.files[0]);
+                    }
+                });
+                photoInput.addEventListener('change', function(e) {
+                    if (e.target.files.length) handlePhotoUpload(e.target.files[0]);
+                });
+            }
+
+            function handlePhotoUpload(file) {
+                if (!file.type.match('image.*')) { showToast('Please upload an image file (JPG, PNG)', 'warning'); return; }
+                if (file.size > 5 * 1024 * 1024) { showToast('File size must be less than 5MB', 'warning'); return; }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImage').src = e.target.result;
+                    document.getElementById('photoPreview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+                showToast('Photo uploaded successfully', 'success');
+            }
+
+            if (isUsingExistingSuspect) {
+                lockSuspectFields();
+                updateStatusIndicator('using');
+            }
+
+            document.getElementById('caseForm').addEventListener('submit', function(e) {
+                let isValid = true;
+
+                const idNumber = document.getElementById('idNumber').value.trim();
+                if (!idNumber || idNumber.length !== 13) {
+                    e.preventDefault();
+                    showToast('Please enter a valid 13-digit ID number', 'danger');
+                    document.getElementById('idNumber').focus();
+                    return false;
+                }
+
+                // Phone number: must be exactly 10 digits if provided, but optional
+                const phone = document.getElementById('contactNumber').value.trim();
+                if (phone && !/^\d{10}$/.test(phone)) {
+                    isValid = false;
+                    document.getElementById('contactNumber').classList.add('is-invalid');
+                    showToast('Contact number must be exactly 10 digits.', 'danger');
+                }
+
+                const requiredFields = [
+                    {id: 'suspectFirstName', name: 'First Name'},
+                    {id: 'suspectLastName', name: 'Last Name'},
+                    {id: 'title', name: 'Case Title'},
+                    {id: 'category', name: 'Category'},
+                    {id: 'severity', name: 'Severity'},
+                    {id: 'description', name: 'Description'}
+                ];
+                for (const field of requiredFields) {
+                    const element = document.getElementById(field.id);
+                    if (element && !element.value.trim()) {
+                        isValid = false;
+                        element.classList.add('is-invalid');
+                        showToast(`Please fill in the ${field.name} field`, 'warning');
+                        element.focus();
+                        break;
+                    } else if (element) element.classList.remove('is-invalid');
+                }
+
+                const incidentDate = document.getElementById('incident_date').value;
+                if (incidentDate) {
+                    const selectedDate = new Date(incidentDate);
+                    const now = new Date();
+                    if (selectedDate > now) {
+                        isValid = false;
+                        document.getElementById('incident_date').classList.add('is-invalid');
+                        showToast('Incident date cannot be in the future.', 'danger');
+                    }
+                }
+
+                if (!isValid) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                const submitBtn = this.querySelector('button[name="create_case"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creating Case...';
+                }
+
+                const disabledSelects = this.querySelectorAll('select:disabled');
+                disabledSelects.forEach(field => field.disabled = false);
+                return true;
+            });
+
+            document.querySelectorAll('#caseForm input, #caseForm textarea, #caseForm select').forEach(field => {
+                field.addEventListener('input', function() {
+                    if (this.checkValidity()) this.classList.remove('is-invalid');
+                });
+            });
+        });
+    </script>
+</div>
+{% endblock %}

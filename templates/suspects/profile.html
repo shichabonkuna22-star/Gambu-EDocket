@@ -1,0 +1,740 @@
+{% extends "base.html" %}
+
+{% block title %}{{ suspect.full_name }} – Suspect Profile | SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Suspect Profile</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="{{ url_for('suspects.search_suspects') }}" class="h5 text-white">Suspects</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">{{ suspect.full_name }}</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Suspect Profile Specific Styles */
+    .suspect-profile-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0, 63, 135, 0.1);
+        border: 1px solid rgba(0, 63, 135, 0.08);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .suspect-profile-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 50px rgba(0, 63, 135, 0.15);
+        border-color: var(--saps-blue);
+    }
+    
+    .suspect-profile-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 6px;
+        background: linear-gradient(90deg, var(--saps-blue), var(--saps-gold), var(--saps-blue));
+        opacity: 0.7;
+    }
+    
+    /* Suspect Photo Container */
+    .suspect-photo-container {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        margin: 0 auto;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 5px solid white;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        transition: all 0.4s ease;
+        background: linear-gradient(135deg, var(--saps-blue-light), #e6f0ff);
+    }
+    
+    .suspect-photo-container:hover {
+        transform: scale(1.05) rotate(5deg);
+        box-shadow: 0 15px 35px rgba(0, 63, 135, 0.3);
+        border-color: var(--saps-gold);
+    }
+    
+    .suspect-photo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+    
+    .suspect-photo-container:hover .suspect-photo {
+        transform: scale(1.1);
+    }
+    
+    .photo-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+    }
+    
+    .photo-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 0.5rem;
+        text-align: center;
+        font-size: 0.8rem;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .suspect-photo-container:hover .photo-overlay {
+        opacity: 1;
+    }
+    
+    /* Profile Stats */
+    .profile-stat {
+        padding: 1.5rem;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #f8fafc, #e6f0ff);
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .profile-stat:hover {
+        transform: translateY(-5px);
+        border-color: var(--saps-blue);
+        background: linear-gradient(135deg, white, var(--saps-blue-light));
+        box-shadow: 0 10px 25px rgba(0, 63, 135, 0.1);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--saps-blue);
+        line-height: 1;
+    }
+    
+    .stat-label {
+        color: var(--saps-blue-dark);
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    
+    /* Case Timeline */
+    .case-timeline {
+        position: relative;
+        padding-left: 40px;
+    }
+    
+    .case-timeline::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: linear-gradient(to bottom, var(--saps-blue), var(--saps-gold), var(--saps-blue));
+        border-radius: 3px;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .timeline-item:hover {
+        transform: translateX(10px);
+        box-shadow: 0 10px 30px rgba(0, 63, 135, 0.15);
+        border-color: var(--saps-blue-light);
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -32px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--saps-blue);
+        border: 4px solid white;
+        box-shadow: 0 0 0 3px var(--saps-blue);
+        z-index: 2;
+    }
+    
+    .timeline-item:hover::before {
+        background: var(--saps-gold);
+        box-shadow: 0 0 0 3px var(--saps-gold);
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+    }
+    
+    /* Case Status Badges */
+    .case-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: 2px solid;
+        transition: all 0.3s ease;
+    }
+    
+    .case-status:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .status-open {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        color: #1565c0;
+        border-color: #90caf9;
+    }
+    
+    .status-investigating {
+        background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+        color: #e65100;
+        border-color: #ffb74d;
+    }
+    
+    .status-in_court {
+        background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+        color: #7b1fa2;
+        border-color: #ce93d8;
+    }
+    
+    .status-closed {
+        background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+        color: #2e7d32;
+        border-color: #a5d6a7;
+    }
+    
+    /* Personal Details Table */
+    .details-table {
+        width: 100%;
+    }
+    
+    .details-table tr {
+        transition: all 0.3s ease;
+    }
+    
+    .details-table tr:hover {
+        background: var(--saps-blue-light);
+        transform: translateX(5px);
+    }
+    
+    .details-table td {
+        padding: 1rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .details-table td:first-child {
+        color: var(--saps-blue);
+        font-weight: 600;
+        width: 40%;
+    }
+    
+    /* Action Buttons */
+    .action-button {
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        border: 2px solid transparent;
+    }
+    
+    .action-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .btn-view-case {
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+    }
+    
+    .btn-view-case:hover {
+        border-color: var(--saps-gold);
+        color: white;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        padding: 4rem 2rem;
+        text-align: center;
+        background: linear-gradient(135deg, #f8fafc, #e6f0ff);
+        border-radius: 16px;
+        border: 2px dashed var(--saps-blue-light);
+        transition: all 0.3s ease;
+    }
+    
+    .empty-state:hover {
+        border-color: var(--saps-gold);
+        background: linear-gradient(135deg, white, var(--saps-blue-light));
+    }
+    
+    .empty-state-icon {
+        width: 100px;
+        height: 100px;
+        background: var(--saps-blue-light);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        color: var(--saps-blue);
+        font-size: 2.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .empty-state:hover .empty-state-icon {
+        transform: scale(1.1);
+        background: var(--saps-blue);
+        color: white;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .suspect-photo-container {
+            width: 150px;
+            height: 150px;
+        }
+        
+        .case-timeline {
+            padding-left: 30px;
+        }
+        
+        .timeline-item::before {
+            left: -25px;
+        }
+        
+        .timeline-item {
+            padding: 1rem;
+        }
+        
+        .profile-stat {
+            padding: 1rem;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+    <!-- Breadcrumb (kept from original) -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb shadow-sm">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('main.dashboard') }}">
+                            <i class="fas fa-home me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('suspects.search_suspects') }}">
+                            <i class="fas fa-user-secret me-1"></i> Suspect Database
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active text-primary fw-bold">
+                        <i class="fas fa-id-card me-1"></i> Suspect Profile
+                    </li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+                <div class="mb-3 mb-md-0">
+                    <h1 class="display-5 fw-bold text-primary mb-2">
+                        <i class="fas fa-user-secret me-2"></i>
+                        Suspect Profile
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Complete criminal history and identification records
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary">
+                        <i class="fas fa-print me-1"></i> Print Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column: Suspect Information -->
+        <div class="col-lg-4">
+            <!-- Profile Card -->
+            <div class="suspect-profile-card p-4 mb-4">
+                <div class="text-center mb-4">
+                    <div class="suspect-photo-container mb-3">
+                        {% if suspect.photo_path %}
+                        <img src="{{ url_for('static', filename=suspect.photo_path) }}" 
+                             class="suspect-photo" 
+                             alt="{{ suspect.full_name }}"
+                             onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'photo-placeholder\'><i class=\'fas fa-user fa-3x\'></i></div>'">
+                        <div class="photo-overlay">
+                            <i class="fas fa-camera me-1"></i> Photo Available
+                        </div>
+                        {% else %}
+                        <div class="photo-placeholder">
+                            <i class="fas fa-user fa-3x"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <h2 class="fw-bold mb-1 text-primary">{{ suspect.full_name }}</h2>
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-id-card me-1"></i>
+                        ID: {{ suspect.id_number }}
+                    </p>
+                    
+                    <!-- Threat Level -->
+                    <div class="mb-4">
+                        {% set threat_level = 'danger' if suspect.active_cases > 2 else 'warning' if suspect.active_cases > 0 else 'success' %}
+                        <div class="threat-level-badge p-3 rounded-4 bg-{{ threat_level }}-subtle border border-{{ threat_level }} mb-2 hover-scale">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <h4 class="fw-bold mb-0 text-{{ threat_level }}">{{ suspect.active_cases }}</h4>
+                                    <small class="text-{{ threat_level }} fw-semibold">Active Cases</small>
+                                </div>
+                                <div class="threat-icon">
+                                    {% if threat_level == 'danger' %}
+                                    <i class="fas fa-exclamation-triangle fa-2x text-{{ threat_level }}"></i>
+                                    {% elif threat_level == 'warning' %}
+                                    <i class="fas fa-exclamation-circle fa-2x text-{{ threat_level }}"></i>
+                                    {% else %}
+                                    <i class="fas fa-check-circle fa-2x text-{{ threat_level }}"></i>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <div class="profile-stat hover-lift">
+                            <div class="stat-value">{{ suspect.cases.count() }}</div>
+                            <div class="stat-label">Total Cases</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="profile-stat hover-lift">
+                            <div class="stat-value">
+                                {{ suspect.created_at.strftime('%b %Y') if suspect.created_at else 'N/A' }}
+                            </div>
+                            <div class="stat-label">First Seen</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('cases.create_case', suspect_id=suspect.id) }}" 
+                       class="btn btn-saps">
+                        <i class="fas fa-plus-circle me-2"></i> Add New Case
+                    </a>
+                    <button class="btn btn-outline-primary">
+                        <i class="fas fa-flag me-2"></i> Flag for Review
+                    </button>
+                </div>
+            </div>
+
+            <!-- Personal Details Card -->
+            <div class="suspect-profile-card p-4">
+                <h5 class="fw-bold text-primary mb-3">
+                    <i class="fas fa-id-card me-2"></i> Personal Details
+                </h5>
+                
+                <table class="details-table">
+                    <tr>
+                        <td><i class="fas fa-birthday-cake me-2"></i> Date of Birth</td>
+                        <td class="text-end fw-semibold">
+                            {% if suspect.date_of_birth %}
+                                {{ suspect.date_of_birth.strftime('%d %B %Y') }}
+                                <br><small class="text-muted">({{ ((today - suspect.date_of_birth).days // 365) if today else 'N/A' }} years old)</small>
+                            {% else %}
+                                <span class="text-muted">Unknown</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-venus-mars me-2"></i> Gender</td>
+                        <td class="text-end fw-semibold">
+                            {{ suspect.gender|title if suspect.gender else 'Unknown' }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-phone me-2"></i> Contact Number</td>
+                        <td class="text-end fw-semibold">
+                            {{ suspect.contact_number or 'Unknown' }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-home me-2"></i> Address</td>
+                        <td class="text-end fw-semibold">
+                            {% if suspect.address %}
+                                {{ suspect.address|truncate(30) }}
+                            {% else %}
+                                <span class="text-muted">Unknown</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-calendar-plus me-2"></i> Created</td>
+                        <td class="text-end fw-semibold">
+                            {{ suspect.created_at.strftime('%d %b %Y') if suspect.created_at else 'N/A' }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-sync-alt me-2"></i> Last Updated</td>
+                        <td class="text-end fw-semibold">
+                            {{ suspect.updated_at.strftime('%d %b %Y') if suspect.updated_at else 'N/A' }}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Right Column: Case History -->
+        <div class="col-lg-8">
+            <!-- Case History Card -->
+            <div class="suspect-profile-card p-4 h-100">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+                    <div class="mb-3 mb-md-0">
+                        <h3 class="fw-bold text-primary mb-1">
+                            <i class="fas fa-history me-2"></i> Criminal Case History
+                        </h3>
+                        <p class="text-muted mb-0">
+                            Complete record of all cases involving this suspect
+                        </p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary-gradient px-3 py-2">
+                            {{ cases|length }} Total Cases
+                        </span>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-filter me-1"></i> Filter
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">All Cases</a></li>
+                                <li><a class="dropdown-item" href="#">Active Only</a></li>
+                                <li><a class="dropdown-item" href="#">Closed Cases</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Case Timeline -->
+                {% if cases %}
+                <div class="case-timeline">
+                    {% for case in cases %}
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h5 class="fw-bold mb-1">
+                                    <a href="{{ url_for('cases.view_case', case_id=case.id) }}" 
+                                       class="text-decoration-none text-primary hover-grow">
+                                        {{ case.case_number }}
+                                    </a>
+                                </h5>
+                                <h6 class="fw-semibold mb-2">{{ case.title }}</h6>
+                            </div>
+                            <div class="text-end">
+                                <span class="case-status status-{{ case.status }}">
+                                    <i class="fas fa-{{ 'play' if case.status == 'open' else 'search' if case.status == 'investigating' else 'gavel' if case.status == 'in_court' else 'check' if case.status == 'closed' else 'archive' }}"></i>
+                                    {{ case.status.replace('_', ' ')|title }}
+                                </span>
+                                <div class="text-muted small mt-1">
+                                    {{ case.created_at.strftime('%d %b %Y') }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p class="text-muted mb-3">
+                            {{ case.description|truncate(150) }}
+                        </p>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary rounded-circle p-2 me-2">
+                                        <i class="fas fa-user-shield text-white"></i>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted d-block">Officer</small>
+                                        <span class="fw-semibold">{{ case.assigned_officer.full_name }}</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-gold rounded-circle p-2 me-2">
+                                        <i class="fas fa-calendar text-dark"></i>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted d-block">Incident</small>
+                                        <span class="fw-semibold">
+                                            {% if case.incident_date %}
+                                                {{ case.incident_date.strftime('%d %b %Y') }}
+                                            {% else %}
+                                                Unknown
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <a href="{{ url_for('cases.view_case', case_id=case.id) }}" 
+                               class="action-button btn-view-case">
+                                View Case
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <!-- Empty State -->
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-folder-open"></i>
+                    </div>
+                    <h4 class="fw-bold text-primary mb-2">No Case History</h4>
+                    <p class="text-muted mb-4">
+                        This suspect has no recorded criminal cases in the system.
+                    </p>
+                    <a href="{{ url_for('cases.create_case', suspect_id=suspect.id) }}" 
+                       class="btn btn-saps">
+                        <i class="fas fa-plus-circle me-2"></i> Create First Case
+                    </a>
+                </div>
+                {% endif %}
+                
+                <!-- Case Statistics -->
+                {% if cases %}
+                <div class="row g-3 mt-4 pt-4 border-top">
+                    <div class="col-6 col-md-3">
+                        <div class="profile-stat">
+                            <div class="stat-value">
+                                {{ cases|selectattr('status', 'equalto', 'open')|list|length }}
+                            </div>
+                            <div class="stat-label">Open Cases</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="profile-stat">
+                            <div class="stat-value">
+                                {{ cases|selectattr('status', 'equalto', 'investigating')|list|length }}
+                            </div>
+                            <div class="stat-label">Investigating</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="profile-stat">
+                            <div class="stat-value">
+                                {{ cases|selectattr('status', 'equalto', 'in_court')|list|length }}
+                            </div>
+                            <div class="stat-label">In Court</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="profile-stat">
+                            <div class="stat-value">
+                                {{ cases|selectattr('status', 'equalto', 'closed')|list|length }}
+                            </div>
+                            <div class="stat-label">Closed</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Hover effects for timeline items
+    document.querySelectorAll('.timeline-item').forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateX(10px)';
+            this.style.boxShadow = '0 10px 30px rgba(0, 63, 135, 0.15)';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+            this.style.boxShadow = '';
+        });
+    });
+    
+    // Additional hover effect for profile stats
+    document.querySelectorAll('.profile-stat').forEach(stat => {
+        stat.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+        });
+        
+        stat.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    });
+    
+    // Grow effect on case links
+    document.querySelectorAll('.hover-grow').forEach(link => {
+        link.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.05)';
+        });
+        
+        link.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    });
+</script>
+{% endblock %}

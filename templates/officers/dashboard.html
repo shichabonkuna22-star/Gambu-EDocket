@@ -1,0 +1,750 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard – SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Officer Dashboard</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Dashboard Specific Styles */
+    .welcome-section {
+        background: linear-gradient(135deg, var(--saps-blue, #003f87), var(--saps-blue-dark, #002a5c));
+        border-radius: 20px;
+        padding: 2rem;
+        color: #000 !important;  /* Force black text */
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 40px rgba(0, 63, 135, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Override all text in welcome section to black */
+    .welcome-section * {
+        color: #000 !important;
+    }
+    
+    /* Give badges a light background so they stand out */
+    .welcome-section .badge-display {
+        background: rgba(255, 255, 255, 0.85) !important;
+        border-color: rgba(0, 0, 0, 0.2) !important;
+        color: #000 !important;
+    }
+    
+    .welcome-section .badge-display i {
+        color: #000 !important;
+    }
+    
+    /* Officer status background and text */
+    .welcome-section .officer-status {
+        background: rgba(255, 255, 255, 0.2) !important;
+    }
+    
+    .welcome-section .officer-status .text-light {
+        color: #000 !important;
+    }
+    
+    .welcome-section .officer-status .text-light strong {
+        color: #000 !important;
+    }
+    
+    .welcome-section .officer-status small {
+        color: #333 !important;
+    }
+    
+    .welcome-section .officer-status .status-indicator {
+        background: #28a745 !important;
+    }
+    
+    /* Ensure the heading and other text are black */
+    .welcome-section h1.display-5 {
+        color: #000 !important;
+    }
+    
+    .welcome-section .badge.bg-warning {
+        color: #000 !important;
+    }
+    
+    /* Quick actions card in the right side - already has white background, so text is fine */
+    
+    /* Existing styles below remain unchanged */
+    .badge-display {
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        letter-spacing: 1px;
+        backdrop-filter: blur(10px);
+    }
+    
+    /* Enhanced Stats Cards */
+    .stats-card-dashboard {
+        background: white;
+        border-radius: 18px;
+        padding: 1.75rem;
+        box-shadow: 0 8px 30px rgba(0, 63, 135, 0.08);
+        border: 2px solid transparent;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stats-card-dashboard::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, var(--saps-blue), var(--saps-gold));
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    
+    .stats-card-dashboard:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 50px rgba(0, 63, 135, 0.15);
+        border-color: var(--saps-blue-light);
+    }
+    
+    .stats-card-dashboard:hover::before {
+        opacity: 1;
+    }
+    
+    .stats-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        margin-bottom: 1.2rem;
+        transition: all 0.4s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stats-card-dashboard:hover .stats-icon {
+        transform: scale(1.1) rotate(5deg);
+    }
+    
+    .stats-icon::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    
+    .stats-card-dashboard:hover .stats-icon::after {
+        opacity: 1;
+    }
+    
+    .stats-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .stats-label {
+        color: var(--saps-gray-dark);
+        font-weight: 500;
+        font-size: 0.95rem;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Progress Bar */
+    .case-progress {
+        height: 6px;
+        border-radius: 3px;
+        background: #e9ecef;
+        overflow: hidden;
+        margin: 1.5rem 0;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 1s ease;
+    }
+    
+    .progress-open { background: linear-gradient(90deg, #4dabf7, #228be6); }
+    .progress-closed { background: linear-gradient(90deg, #51cf66, #2b8a3e); }
+    
+    /* Recent Cases Table */
+    .cases-table-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0, 63, 135, 0.08);
+        overflow: hidden;
+        border: 1px solid rgba(0, 63, 135, 0.05);
+    }
+    
+    .table-header {
+        background: linear-gradient(135deg, var(--saps-blue-light), white);
+        border-bottom: 2px solid rgba(0, 63, 135, 0.1);
+        padding: 1.5rem;
+    }
+    
+    .cases-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    .cases-table thead th {
+        background: var(--saps-blue-light);
+        color: var(--saps-blue);
+        font-weight: 600;
+        padding: 1rem 1.5rem;
+        border-bottom: 2px solid rgba(0, 63, 135, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .cases-table tbody tr {
+        transition: all 0.3s ease;
+        border-bottom: 1px solid rgba(0, 63, 135, 0.05);
+    }
+    
+    .cases-table tbody tr:hover {
+        background: rgba(0, 63, 135, 0.03);
+        transform: translateX(5px);
+    }
+    
+    .cases-table tbody td {
+        padding: 1.2rem 1.5rem;
+        vertical-align: middle;
+    }
+    
+    /* Case Status Badge Enhancements */
+    .case-status-badge {
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        letter-spacing: 0.3px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s;
+    }
+    
+    .case-status-badge:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Quick Actions */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .action-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        text-decoration: none;
+        color: var(--saps-black);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 2px solid transparent;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+    
+    .action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0, 63, 135, 0.15);
+        border-color: var(--saps-blue);
+        color: var(--saps-blue);
+    }
+    
+    .action-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, var(--saps-blue-light), #e6f0ff);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin: 0 auto 1rem;
+        color: var(--saps-blue);
+        transition: all 0.3s;
+    }
+    
+    .action-card:hover .action-icon {
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+        transform: scale(1.1);
+    }
+    
+    /* Empty State */
+    .empty-state {
+        padding: 4rem 2rem;
+        text-align: center;
+        background: linear-gradient(135deg, #f8f9fc, #e9ecef);
+        border-radius: 20px;
+        border: 2px dashed var(--saps-blue-light);
+    }
+    
+    .empty-icon {
+        font-size: 4rem;
+        color: var(--saps-blue-light);
+        margin-bottom: 1.5rem;
+        opacity: 0.5;
+    }
+    
+    /* Officer Status */
+    .officer-status {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1rem;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #51cf66;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .welcome-section {
+            padding: 1.5rem;
+        }
+        
+        .stats-value {
+            font-size: 2rem;
+        }
+        
+        .stats-card-dashboard {
+            padding: 1.5rem;
+        }
+        
+        .cases-table {
+            font-size: 0.9rem;
+        }
+        
+        .cases-table tbody td {
+            padding: 1rem;
+        }
+        
+        .quick-actions {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* ===== NEW: Make selected text white for readability ===== */
+    .welcome-section h1.display-5.fw-bold.mb-3 {
+        color: #ffffff !important;
+    }
+
+    .welcome-section .officer-status .text-light,
+    .welcome-section .officer-status .text-light strong {
+        color: #ffffff !important;
+    }
+
+    .welcome-section .officer-status small.d-block.text-light.opacity-75 {
+        color: #ffffff !important;
+        /* keep opacity; the 0.75 will still apply but the color is white */
+    }
+
+    /* ===== NEW: Suspect photo thumbnail ===== */
+    .suspect-thumb {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #dee2e6;
+        background: #f8f9fa;
+        flex-shrink: 0;
+    }
+    .suspect-thumb-placeholder {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+        font-size: 1.5rem;
+        border: 2px solid #dee2e6;
+        flex-shrink: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <div class="mb-3">
+                    <span class="badge bg-warning text-dark px-3 py-2 mb-2 d-inline-flex align-items-center">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        Officer Dashboard
+                    </span>
+                    <h1 class="display-5 fw-bold mb-3">Welcome back, {{ current_user.full_name }}</h1>
+                    <div class="d-flex flex-wrap gap-3 mb-4">
+                        <div class="badge-display">
+                            <i class="fas fa-id-badge me-2"></i>{{ current_user.badge_number }}
+                        </div>
+                        <div class="badge-display">
+                            <i class="fas fa-building me-2"></i>{{ current_user.station }}
+                        </div>
+                        <div class="badge-display">
+                            <i class="fas fa-star me-2"></i>{{ current_user.rank|title if current_user.rank else current_user.role|title }}
+                        </div>
+                    </div>
+                    <div class="officer-status">
+                        <div class="status-indicator"></div>
+                        <div>
+                            <span class="text-light">Status: <strong>Active on Duty</strong></span>
+                            <small class="d-block text-light opacity-75">Last login: {{ current_user.last_login.strftime('%d %b %Y, %H:%M') if current_user.last_login else 'First login' }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 text-center text-lg-end">
+                <div class="position-relative">
+                    <div class="bg-white rounded-4 p-4 shadow-lg d-inline-block">
+                        <h4 class="text-primary mb-3">Quick Actions</h4>
+                        <a href="{{ url_for('cases.create_case') }}" class="btn btn-saps btn-lg w-100 mb-2 position-relative overflow-hidden">
+                            <div class="position-absolute top-50 start-50 translate-middle btn-ripple"></div>
+                            <i class="fas fa-plus-circle me-2"></i>New Case
+                        </a>
+                        <a href="{{ url_for('suspects.search_suspects') }}" class="btn btn-saps-gold btn-lg w-100">
+                            <i class="fas fa-user-secret me-2"></i>Search Suspects
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== COMPUTE PERCENTAGES ONCE ====== -->
+    {% set active_percent = ((stats.open_cases / stats.total_cases) * 100)|round|int if stats.total_cases > 0 else 0 %}
+    {% set closed_percent = ((stats.closed_cases / stats.total_cases) * 100)|round|int if stats.total_cases > 0 else 0 %}
+
+    <!-- Statistics Overview -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3 col-sm-6">
+            <div class="stats-card-dashboard hover-lift">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); color: #1565c0;">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <div class="stats-value">{{ stats.total_cases }}</div>
+                <div class="stats-label">Total Cases Assigned</div>
+                <div class="case-progress mt-3">
+                    <!-- CHANGED: width now matches active_percent -->
+                    <div class="progress-fill progress-open" style="width: {{ active_percent }}%"></div>
+                </div>
+                <div class="small text-muted mt-2">
+                    <i class="fas fa-chart-line me-1"></i>
+                    <span class="text-primary">{{ active_percent }}% Active</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6">
+            <div class="stats-card-dashboard hover-lift">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #fff3e0, #ffe0b2); color: #e65100;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stats-value">{{ stats.open_cases }}</div>
+                <div class="stats-label">Active Investigations</div>
+                <div class="case-progress mt-3">
+                    <!-- CHANGED: width now matches active_percent (same as total active) -->
+                    <div class="progress-fill progress-open" style="width: {{ active_percent }}%"></div>
+                </div>
+                <div class="small text-muted mt-2">
+                    <i class="fas fa-exclamation-circle me-1"></i>
+                    Requires immediate attention
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6">
+            <div class="stats-card-dashboard hover-lift">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9); color: #2e7d32;">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stats-value">{{ stats.closed_cases }}</div>
+                <div class="stats-label">Cases Closed</div>
+                <div class="case-progress mt-3">
+                    <!-- CHANGED: using closed_percent (already correct) -->
+                    <div class="progress-fill progress-closed" style="width: {{ closed_percent }}%"></div>
+                </div>
+                <div class="small text-muted mt-2">
+                    <i class="fas fa-trophy me-1"></i>
+                    {{ closed_percent }}% Success Rate
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6">
+            <div class="stats-card-dashboard hover-lift">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #f3e5f5, #e1bee7); color: #7b1fa2;">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stats-value">{{ stats.total_suspects }}</div>
+                <div class="stats-label">Suspects in Database</div>
+                <div class="case-progress mt-3">
+                    <!-- CHANGED: set to 100% because we have no max; indicates full database -->
+                    <div class="progress-fill" style="width: 100%; background: linear-gradient(90deg, #e1bee7, #ce93d8);"></div>
+                </div>
+                <div class="small text-muted mt-2">
+                    <i class="fas fa-database me-1"></i>
+                    Total records in system
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Cases & Quick Actions -->
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="cases-table-container hover-lift">
+                <div class="table-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="fw-bold mb-0 text-primary">
+                            <i class="fas fa-list-check me-2"></i>Recent Cases
+                        </h3>
+                        <p class="text-muted mb-0 small">Your active and recently updated cases</p>
+                    </div>
+                    <a href="{{ url_for('cases.view_cases') }}" class="btn btn-saps btn-sm">
+                        <i class="fas fa-external-link-alt me-1"></i>View All
+                    </a>
+                </div>
+                
+                <div class="table-responsive">
+                    {% if cases %}
+                    <table class="cases-table">
+                        <thead>
+                            <tr>
+                                <th>Suspect</th>
+                                <th>Case Details</th>
+                                <th>Status</th>
+                                <th>Last Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for case in cases %}
+                            <tr class="case-row" data-case-id="{{ case.id }}">
+                                <td>
+                                    {% if case.suspect %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if case.suspect.photo_path %}
+                                        <img src="{{ url_for('static', filename=case.suspect.photo_path) }}" 
+                                             alt="{{ case.suspect.full_name }}" 
+                                             class="suspect-thumb">
+                                        {% else %}
+                                        <div class="suspect-thumb-placeholder">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <strong>{{ case.suspect.full_name }}</strong><br>
+                                            <small class="text-muted">{{ case.suspect.id_number }}</small>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted fst-italic">Unknown</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            <div class="bg-primary-gradient rounded-3 p-2">
+                                                <i class="fas fa-gavel text-white"></i>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <strong class="d-block">{{ case.case_number }}</strong>
+                                            <small class="text-muted">{{ case.title|truncate(30) }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="case-status-badge status-{{ case.status }}">
+                                        <i class="fas fa-{% if case.status == 'open' %}clock{% elif case.status == 'closed' %}check{% elif case.status == 'investigating' %}search{% elif case.status == 'in_court' %}balance-scale{% else %}archive{% endif %}"></i>
+                                        {{ case.status.replace('_', ' ')|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="text-nowrap">
+                                        <strong>{{ case.updated_at.strftime('%d %b') }}</strong><br>
+                                        <small class="text-muted">{{ case.updated_at.strftime('%H:%M') }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <!-- Eye icon – view case -->
+                                        <a href="{{ url_for('cases.view_case', case_id=case.id) }}" 
+                                           class="btn btn-sm btn-primary btn-hover-grow">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <!-- Pencil icon – now also redirects to the case view (same as eye) -->
+                                        <a href="{{ url_for('cases.view_case', case_id=case.id) }}" 
+                                           class="btn btn-sm btn-outline-primary btn-hover-grow">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-inbox"></i>
+                        </div>
+                        <h4 class="fw-bold text-primary mb-3">No Cases Assigned</h4>
+                        <p class="text-muted mb-4">You haven't been assigned any cases yet. Start by creating a new case or contact your supervisor.</p>
+                        <a href="{{ url_for('cases.create_case') }}" class="btn btn-saps btn-lg">
+                            <i class="fas fa-plus-circle me-2"></i>Create Your First Case
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions Sidebar -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-lg rounded-4 h-100 hover-lift">
+                <div class="card-body p-4">
+                    <h4 class="fw-bold text-primary mb-4">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h4>
+                    
+                    <div class="quick-actions">
+                        <a href="{{ url_for('cases.create_case') }}" class="action-card">
+                            <div class="action-icon">
+                                <i class="fas fa-folder-plus"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">New Case</h6>
+                            <p class="text-muted small mb-0">File a criminal case</p>
+                        </a>
+                        
+                        <a href="{{ url_for('suspects.search_suspects') }}" class="action-card">
+                            <div class="action-icon">
+                                <i class="fas fa-user-secret"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">Suspect Lookup</h6>
+                            <p class="text-muted small mb-0">Find existing suspects</p>
+                        </a>
+                    </div>
+                    
+                    <!-- Recent Activity -->
+                    <div class="mt-5 pt-4 border-top">
+                        <h6 class="fw-bold mb-3">Recent Activity</h6>
+                        <div class="timeline small">
+                            {% if cases|length > 0 %}
+                            {% for case in cases[:3] %}
+                            <div class="timeline-item">
+                                <div class="d-flex justify-content-between">
+                                    <strong>{{ case.case_number }}</strong>
+                                    <small class="text-muted">{{ case.updated_at.strftime('%H:%M') }}</small>
+                                </div>
+                                <p class="mb-0 small">{{ case.title|truncate(40) }}</p>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <p class="text-muted small mb-0 fst-italic">No recent activity</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Dashboard animations and interactions
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate stats counters
+    const statsValues = document.querySelectorAll('.stats-value');
+    statsValues.forEach(stat => {
+        const target = parseInt(stat.textContent);
+        const duration = 2000;
+        const step = target / (duration / 16);
+        let current = 0;
+        
+        const updateCounter = () => {
+            current += step;
+            if (current < target) {
+                stat.textContent = Math.floor(current);
+                requestAnimationFrame(updateCounter);
+            } else {
+                stat.textContent = target;
+            }
+        };
+        
+        updateCounter();
+    });
+    
+    // Case row hover effects
+    const caseRows = document.querySelectorAll('.case-row');
+    caseRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateX(5px)';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateX(0)';
+        });
+    });
+    
+    // Initialize tooltips
+    const tooltips = document.querySelectorAll('[title]');
+    tooltips.forEach(tooltip => {
+        new bootstrap.Tooltip(tooltip);
+    });
+});
+</script>
+{% endblock %}

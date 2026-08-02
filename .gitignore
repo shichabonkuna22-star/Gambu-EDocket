@@ -1,0 +1,110 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django/Flask stuff:
+instance/
+.webassets-cache
+*.log
+
+# Database files (local SQLite - don't commit these)
+*.db
+*.sqlite
+*.sqlite3
+saps.db
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# User uploads (generated content)
+static/uploads/*
+!static/uploads/.gitkeep
+
+# Don't ignore static img files (default images like shichabo.jpg)
+!static/img/
+!static/img/*.jpg
+!static/img/*.jpeg
+!static/img/*.png
+!static/img/*.gif
+!static/img/*.svg
+
+# Migration files (optional - some teams prefer to commit these, others don't)
+# migrations/
+
+# Local config
+config.local.py
+
+# ============================================
+# EXCEPTIONS – include static/lib
+# ============================================
+# Force Git to include the entire static/lib folder
+!static/lib/
+!static/lib/**

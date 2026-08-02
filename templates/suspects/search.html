@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+
+{% block title %}Search Suspects – SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Search Suspects</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">Suspects</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Hero Search Section -->
+    <section class="search-hero bg-primary-gradient py-6">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="text-center mb-5">
+                        <div class="search-icon-wrapper mb-4">
+                            <div class="search-icon-animated">
+                                <i class="fas fa-search fa-3x text-white"></i>
+                            </div>
+                        </div>
+                        <h1 class="display-4 fw-bold text-white mb-3">
+                            Advanced Suspect Search
+                        </h1>
+                        <p class="lead text-white-50 mb-4">
+                            Search across the SAPS database using ID numbers or names
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Search Interface -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row g-5">
+                <!-- Search Panel -->
+                <div class="col-lg-4">
+                    <div class="search-panel card border-0 shadow-lg rounded-4 hover-lift">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center mb-4">
+                                <div class="bg-primary rounded-3 p-3 me-3">
+                                    <i class="fas fa-search fa-2x text-white"></i>
+                                </div>
+                                <div>
+                                    <h3 class="fw-bold mb-1">Search Methods</h3>
+                                    <p class="text-muted mb-0">Choose your search approach</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Quick Search Form -->
+                            <div class="mb-4">
+                                <h5 class="fw-semibold mb-3 text-primary">
+                                    <i class="fas fa-id-card me-2"></i>Quick Search
+                                </h5>
+                                <form method="GET" action="{{ url_for('suspects.search_suspects') }}" id="quickSearchForm">
+                                    <div class="input-group input-group-lg mb-3">
+                                        <span class="input-group-text bg-primary text-white border-0">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text" 
+                                               name="q" 
+                                               class="form-control form-control-lg border-start-0"
+                                               placeholder="Enter ID number, first name, or last name..."
+                                               value="{{ query }}"
+                                               autocomplete="off"
+                                               id="searchInput">
+                                    </div>
+                                    <button type="submit" class="btn btn-saps w-100 py-3">
+                                        <i class="fas fa-search me-2"></i>Search Database
+                                    </button>
+                                </form>
+                            </div>
+                            
+                            <!-- Search Filters -->
+                            <div class="search-filters">
+                                <h5 class="fw-semibold mb-3 text-primary">
+                                    <i class="fas fa-filter me-2"></i>Advanced Filters
+                                </h5>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <div class="filter-option p-3 rounded-3 hover-scale-sm">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="activeCases">
+                                                <label class="form-check-label small fw-semibold" for="activeCases">
+                                                    Active Cases Only
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Stats -->
+                    <div class="stats-card mt-4">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-3">
+                                <i class="fas fa-chart-bar me-2 text-primary"></i>Database Statistics
+                            </h5>
+                            <div class="stats-list">
+                                <div class="stat-item d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">Total Suspects</span>
+                                    <span class="fw-bold text-primary">{{ suspects|length if suspects else '0' }}</span>
+                                </div>
+                                <div class="stat-item d-flex justify-content-between py-2 border-bottom">
+                                    <span class="text-muted">Active Cases</span>
+                                    <span class="fw-bold text-danger">
+                                        {% if suspects %}
+                                            {% set total_active = namespace(value=0) %}
+                                            {% for suspect in suspects %}
+                                                {% set total_active.value = total_active.value + suspect.active_cases %}
+                                            {% endfor %}
+                                            {{ total_active.value }}
+                                        {% else %}
+                                            0
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Results Panel -->
+                <div class="col-lg-8">
+                    {% if query %}
+                    <div class="results-header d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h3 class="fw-bold mb-1">
+                                <i class="fas fa-search-result me-2"></i>Search Results
+                            </h3>
+                            <p class="text-muted mb-0">
+                                Found <span class="fw-bold text-primary">{{ suspects|length }}</span> suspect(s) matching "<span class="fw-bold">{{ query }}</span>"
+                            </p>
+                        </div>
+                        <div class="search-actions">
+                            <button class="btn btn-outline-primary" onclick="clearSearch()">
+                                <i class="fas fa-times me-2"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {% if suspects %}
+                    <div class="row g-4">
+                        {% for suspect in suspects %}
+                        <div class="col-md-6">
+                            <div class="suspect-card card border-0 shadow-sm hover-lift h-100">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-start mb-3">
+                                        <!-- Suspect Photo -->
+                                        <div class="suspect-photo-wrapper me-4 position-relative">
+                                            {% if suspect.photo_path %}
+                                            <img src="{{ url_for('static', filename=suspect.photo_path) }}" 
+                                                 class="suspect-photo-img rounded-3" 
+                                                 alt="{{ suspect.full_name }}"
+                                                 onerror="this.src='{{ url_for('static', filename='img/default_suspect.jpg') }}'">
+                                            {% else %}
+                                            <div class="suspect-photo-placeholder rounded-3 d-flex align-items-center justify-content-center" 
+                                                 style="width: 120px; height: 120px; background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));">
+                                                <i class="fas fa-user fa-2x text-white"></i>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Suspect Details -->
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <div>
+                                                    <h5 class="fw-bold mb-1">{{ suspect.full_name }}</h5>
+                                                    <p class="text-muted small mb-2">
+                                                        <i class="fas fa-id-card me-1"></i>{{ suspect.id_number }}
+                                                    </p>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="badge bg-{{ 'danger' if suspect.active_cases > 0 else 'success' }} badge-pill py-2 px-3">
+                                                        {{ suspect.active_cases }} Active
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Additional Info -->
+                                            <div class="suspect-info-grid">
+                                                <div class="info-item">
+                                                    <small class="text-muted">Gender</small>
+                                                    <div class="fw-semibold">{{ suspect.gender|title if suspect.gender else 'N/A' }}</div>
+                                                </div>
+                                                <div class="info-item">
+                                                    <small class="text-muted">Age</small>
+                                                    <div class="fw-semibold">
+                                                        {% if suspect.date_of_birth %}
+                                                            {{ ((today - suspect.date_of_birth).days / 365)|int }} years
+                                                        {% else %}
+                                                            N/A
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="info-item">
+                                                    <small class="text-muted">Registered</small>
+                                                    <div class="fw-semibold">{{ suspect.created_at.strftime('%d %b %Y') }}</div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Action Buttons -->
+                                            <div class="d-flex gap-2 mt-3">
+                                                <a href="{{ url_for('suspects.view_suspect', suspect_id=suspect.id) }}" 
+                                                   class="btn btn-primary btn-sm flex-grow-1">
+                                                    <i class="fas fa-eye me-1"></i>View Profile
+                                                </a>
+                                                <a href="{{ url_for('cases.create_case', suspect_id=suspect.id) }}" 
+                                                   class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-plus me-1"></i>Add Case
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <!-- No Results -->
+                    <div class="no-results-card text-center py-8">
+                        <div class="empty-state-icon mb-4">
+                            <i class="fas fa-user-slash fa-4x text-muted"></i>
+                        </div>
+                        <h4 class="fw-bold text-muted mb-3">No Suspects Found</h4>
+                        <p class="text-muted mb-4">
+                            No matches found for "<strong>{{ query }}</strong>". Try a different search term.
+                        </p>
+                        <div class="d-flex justify-content-center gap-3">
+                            <button class="btn btn-outline-primary" onclick="clearSearch()">
+                                <i class="fas fa-times me-2"></i>Clear Search
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <!-- Empty State -->
+                    <div class="empty-search-state text-center py-8">
+                        <div class="search-illustration mb-5">
+                            <div class="search-illustration-inner position-relative mx-auto" style="max-width: 400px;">
+                                <div class="search-icon-large">
+                                    <i class="fas fa-search fa-5x text-primary opacity-25"></i>
+                                </div>
+                                <div class="search-lines position-absolute top-50 start-50 translate-middle">
+                                    <div class="search-line line-1"></div>
+                                    <div class="search-line line-2"></div>
+                                    <div class="search-line line-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <h3 class="fw-bold text-primary mb-3">Start Your Search</h3>
+                        <p class="text-muted lead mb-4">
+                            Enter an ID number or name above to search through the SAPS suspect database.
+                        </p>
+                        <div class="search-tips bg-light rounded-4 p-4 mt-5">
+                            <h5 class="fw-bold mb-3">
+                                <i class="fas fa-lightbulb me-2 text-warning"></i>Search Tips
+                            </h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="tip-card p-3 rounded-3 hover-scale-sm">
+                                        <i class="fas fa-id-card text-primary me-2"></i>
+                                        <span>Use 13-digit SA ID numbers for exact matches</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="tip-card p-3 rounded-3 hover-scale-sm">
+                                        <i class="fas fa-bolt text-primary me-2"></i>
+                                        <span>Partial name searches are supported</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="tip-card p-3 rounded-3 hover-scale-sm">
+                                        <i class="fas fa-shield-alt text-gold me-2"></i>
+                                        <span>All searches are logged for security purposes</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<style>
+    /* Hero Search Section */
+    .search-hero {
+        background: linear-gradient(135deg, var(--saps-blue) 0%, var(--saps-blue-dark) 100%);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .search-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg  '%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+    }
+    
+    .search-icon-wrapper {
+        display: inline-block;
+        position: relative;
+    }
+    
+    .search-icon-animated {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+    
+    /* Search Panel */
+    .search-panel {
+        background: white;
+        border: 1px solid rgba(0, 63, 135, 0.1);
+        position: sticky;
+        top: 20px;
+    }
+    
+    .filter-option {
+        background: var(--saps-blue-light);
+        border: 1px solid rgba(0, 63, 135, 0.1);
+        transition: all 0.2s ease;
+    }
+    
+    .filter-option:hover {
+        background: white;
+        border-color: var(--saps-blue);
+        transform: translateY(-2px);
+    }
+    
+    /* Suspect Cards */
+    .suspect-card {
+        background: white;
+        border: 1px solid rgba(0, 63, 135, 0.1);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .suspect-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--saps-gold);
+        box-shadow: 0 15px 30px rgba(0, 63, 135, 0.15) !important;
+    }
+    
+    .suspect-photo-wrapper {
+        width: 120px;
+        height: 120px;
+        flex-shrink: 0;
+    }
+    
+    .suspect-photo-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border: 3px solid var(--saps-blue-light);
+        transition: all 0.3s ease;
+    }
+    
+    .suspect-card:hover .suspect-photo-img {
+        border-color: var(--saps-gold);
+        transform: scale(1.05);
+    }
+    
+    .suspect-photo-placeholder {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        border: 3px solid var(--saps-blue-light);
+    }
+    
+    .suspect-info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .info-item {
+        background: var(--saps-blue-light);
+        padding: 0.5rem;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    /* Empty States */
+    .no-results-card, .empty-search-state {
+        background: white;
+        border-radius: 16px;
+        padding: 3rem;
+        border: 2px dashed #e9ecef;
+    }
+    
+    .empty-state-icon {
+        opacity: 0.2;
+    }
+    
+    .search-tips {
+        background: linear-gradient(135deg, #f8fafc, #e6f0ff);
+        border: 1px solid rgba(0, 63, 135, 0.1);
+    }
+    
+    .tip-card {
+        background: white;
+        border: 1px solid rgba(0, 63, 135, 0.1);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+    }
+    
+    .tip-card:hover {
+        background: var(--saps-blue-light);
+        border-color: var(--saps-blue);
+        transform: translateX(5px);
+    }
+    
+    /* Search Illustration */
+    .search-illustration {
+        position: relative;
+    }
+    
+    .search-line {
+        position: absolute;
+        background: var(--saps-blue);
+        opacity: 0.1;
+        animation: scan 3s infinite;
+    }
+    
+    .line-1 {
+        width: 100%;
+        height: 2px;
+        top: 30%;
+        animation-delay: 0s;
+    }
+    
+    .line-2 {
+        width: 100%;
+        height: 2px;
+        top: 50%;
+        animation-delay: 1s;
+    }
+    
+    .line-3 {
+        width: 100%;
+        height: 2px;
+        top: 70%;
+        animation-delay: 2s;
+    }
+    
+    @keyframes scan {
+        0% { opacity: 0.1; }
+        50% { opacity: 0.3; }
+        100% { opacity: 0.1; }
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .search-hero {
+            padding: 3rem 0;
+        }
+        
+        .suspect-info-grid {
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+        }
+        
+        .search-panel {
+            position: static;
+            margin-bottom: 2rem;
+        }
+    }
+</style>
+
+<script>
+// Search functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize quick search with debounce
+    const searchInput = document.getElementById('searchInput');
+    let searchTimeout;
+    
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            if (this.value.length >= 3) {
+                document.getElementById('quickSearchForm').submit();
+            }
+        }, 500);
+    });
+});
+
+function clearSearch() {
+    window.location.href = "{{ url_for('suspects.search_suspects') }}";
+}
+</script>
+{% endblock %}
