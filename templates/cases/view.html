@@ -271,7 +271,7 @@
                     <div class="text-center">
                         <div class="suspect-photo-enhanced mb-3">
                             {% if case.suspect.photo_path %}
-                            <img src="{{ url_for('static', filename=case.suspect.photo_path|suspect_photo) }}" 
+                            <img src="{{ case.suspect.photo_path|suspect_photo }}" 
                                  alt="{{ case.suspect.full_name }}"
                                  class="img-fluid"
                                  onerror="this.src='{{ url_for('static', filename='img/default_suspect.jpg') }}'">

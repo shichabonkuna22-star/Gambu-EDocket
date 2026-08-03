@@ -475,7 +475,6 @@
                 <div class="stats-value">{{ stats.total_cases }}</div>
                 <div class="stats-label">Total Cases Assigned</div>
                 <div class="case-progress mt-3">
-                    <!-- CHANGED: width now matches active_percent -->
                     <div class="progress-fill progress-open" style="width: {{ active_percent }}%"></div>
                 </div>
                 <div class="small text-muted mt-2">
@@ -493,7 +492,6 @@
                 <div class="stats-value">{{ stats.open_cases }}</div>
                 <div class="stats-label">Active Investigations</div>
                 <div class="case-progress mt-3">
-                    <!-- CHANGED: width now matches active_percent (same as total active) -->
                     <div class="progress-fill progress-open" style="width: {{ active_percent }}%"></div>
                 </div>
                 <div class="small text-muted mt-2">
@@ -511,7 +509,6 @@
                 <div class="stats-value">{{ stats.closed_cases }}</div>
                 <div class="stats-label">Cases Closed</div>
                 <div class="case-progress mt-3">
-                    <!-- CHANGED: using closed_percent (already correct) -->
                     <div class="progress-fill progress-closed" style="width: {{ closed_percent }}%"></div>
                 </div>
                 <div class="small text-muted mt-2">
@@ -529,7 +526,6 @@
                 <div class="stats-value">{{ stats.total_suspects }}</div>
                 <div class="stats-label">Suspects in Database</div>
                 <div class="case-progress mt-3">
-                    <!-- CHANGED: set to 100% because we have no max; indicates full database -->
                     <div class="progress-fill" style="width: 100%; background: linear-gradient(90deg, #e1bee7, #ce93d8);"></div>
                 </div>
                 <div class="small text-muted mt-2">
@@ -575,7 +571,7 @@
                                     {% if case.suspect %}
                                     <div class="d-flex align-items-center gap-2">
                                         {% if case.suspect.photo_path %}
-                                        <img src="{{ url_for('static', filename=case.suspect.photo_path) }}" 
+                                        <img src="{{ case.suspect.photo_path|suspect_photo }}" 
                                              alt="{{ case.suspect.full_name }}" 
                                              class="suspect-thumb">
                                         {% else %}

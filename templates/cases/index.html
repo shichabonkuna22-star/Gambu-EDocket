@@ -158,13 +158,23 @@
                 <div class="p-4">
                     <p class="text-muted mb-3">{{ case.description[:120] }}{% if case.description|length > 120 %}...{% endif %}</p>
                     
-                    <!-- Suspect Information -->
+                    <!-- Suspect Information with Photo -->
                     <div class="case-suspect-info">
                         <div class="d-flex align-items-center">
-                            <div class="suspect-avatar">
-                                {{ case.suspect.first_name[0] if case.suspect else '?' }}{{ case.suspect.last_name[0] if case.suspect and case.suspect.last_name else '' }}
+                            <!-- Photo / Avatar -->
+                            <div class="suspect-avatar-wrapper">
+                                {% if case.suspect and case.suspect.photo_path %}
+                                    <img src="{{ case.suspect.photo_path|suspect_photo }}" 
+                                         alt="{{ case.suspect.full_name }}"
+                                         class="suspect-avatar-img"
+                                         onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<div class=\'suspect-avatar\'>{{ case.suspect.first_name[0] if case.suspect else '?' }}{{ case.suspect.last_name[0] if case.suspect and case.suspect.last_name else '' }}</div>'">
+                                {% else %}
+                                    <div class="suspect-avatar">
+                                        {{ case.suspect.first_name[0] if case.suspect else '?' }}{{ case.suspect.last_name[0] if case.suspect and case.suspect.last_name else '' }}
+                                    </div>
+                                {% endif %}
                             </div>
-                            <div class="flex-grow-1">
+                            <div class="flex-grow-1 ms-2">
                                 <div class="fw-semibold">{{ case.suspect.full_name if case.suspect else 'Suspect Not Identified' }}</div>
                                 {% if case.suspect %}
                                 <div class="small text-muted">
@@ -469,19 +479,39 @@
         margin: 1rem 0;
         border: 1px solid rgba(0, 63, 135, 0.1);
     }
-    .suspect-avatar {
-        width: 40px;
-        height: 40px;
-        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+    .suspect-avatar-wrapper {
+        width: 50px;
+        height: 50px;
+        flex-shrink: 0;
         border-radius: 50%;
+        overflow: hidden;
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: 600;
-        font-size: 0.9rem;
-        margin-right: 1rem;
-        flex-shrink: 0;
+        font-size: 1.1rem;
+        border: 2px solid rgba(255,255,255,0.6);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .suspect-avatar {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+        font-weight: 700;
+        font-size: 1.2rem;
+        text-transform: uppercase;
+    }
+    .suspect-avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
     }
     .case-progress {
         height: 6px;
@@ -587,6 +617,10 @@
         .management-header { padding: 1.5rem; }
         .case-actions { flex-direction: column; }
         .quick-stats { grid-template-columns: repeat(2, 1fr); }
+        .suspect-avatar-wrapper {
+            width: 40px;
+            height: 40px;
+        }
     }
 </style>
 

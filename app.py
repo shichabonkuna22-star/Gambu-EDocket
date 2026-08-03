@@ -1,4 +1,7 @@
-from flask import Flask, render_template
+from dotenv import load_dotenv
+load_dotenv()  # Load .env file BEFORE creating app
+
+from flask import Flask, render_template, url_for   # <-- added url_for
 import os
 from config import Config
 from extensions import db, login_manager
@@ -34,10 +37,16 @@ def create_app():
     # Add custom template filter for suspect photos
     @app.template_filter('suspect_photo')
     def suspect_photo_filter(photo_path):
+        # Debug: print what we get
+        print(f"🔍 suspect_photo filter called with: {photo_path}")
         if not photo_path:
-            return 'img/default_suspect.jpg'
+            return url_for('static', filename='img/default_suspect.jpg')
+        # If it's a full URL (Cloudinary), return it directly
+        if photo_path.startswith('http'):
+            return photo_path
+        # Otherwise, treat as local path
         filename = photo_path.split('/')[-1].split('\\')[-1]
-        return f'uploads/suspects/{filename}'
+        return url_for('static', filename=f'uploads/suspects/{filename}')
     
     # Import and register blueprints
     from src.auth import auth_bp

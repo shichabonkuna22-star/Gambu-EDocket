@@ -415,7 +415,7 @@
                 <div class="text-center mb-4">
                     <div class="suspect-photo-container mb-3">
                         {% if suspect.photo_path %}
-                        <img src="{{ url_for('static', filename=suspect.photo_path) }}" 
+                        <img src="{{ suspect.photo_path|suspect_photo }}" 
                              class="suspect-photo" 
                              alt="{{ suspect.full_name }}"
                              onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'photo-placeholder\'><i class=\'fas fa-user fa-3x\'></i></div>'">
