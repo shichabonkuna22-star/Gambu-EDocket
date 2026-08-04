@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications – SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Notifications</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="{{ url_for('main.dashboard') }}" class="h5 text-white">Dashboard</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">Notifications</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="fw-bold text-primary">
+                <i class="fas fa-bell me-2"></i>
+                Your Notifications
+            </h2>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <span class="badge bg-primary-gradient p-3 fs-6 me-2">
+                <i class="fas fa-envelope me-2"></i>
+                {{ notifications|selectattr('read', 'equalto', false)|list|length }} unread
+            </span>
+            {% if notifications|selectattr('read', 'equalto', false)|list|length > 0 %}
+            <form method="POST" action="{{ url_for('main.mark_all_read') }}" class="d-inline">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="fas fa-check-double me-2"></i>Mark All Read
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if notifications %}
+    <div class="notifications-list">
+        {% for notification in notifications %}
+        <div class="notification-item {% if not notification.read %}unread{% endif %} card mb-3">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-md-9">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="notification-icon">
+                                {% if not notification.read %}
+                                <span class="badge bg-primary rounded-circle p-2">
+                                    <i class="fas fa-circle text-white" style="font-size: 8px;"></i>
+                                </span>
+                                {% else %}
+                                <span class="badge bg-light text-muted rounded-circle p-2">
+                                    <i class="fas fa-check-circle"></i>
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <p class="mb-1 text-dark">{{ notification.message }}</p>
+                                <div class="d-flex flex-wrap gap-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ notification.created_at.strftime('%d %b %Y, %H:%M') }}
+                                    </small>
+                                    {% if notification.link %}
+                                    <a href="{{ notification.link }}" class="small text-primary">
+                                        <i class="fas fa-arrow-right me-1"></i>View Details
+                                    </a>
+                                    {% endif %}
+                                    {% if not notification.read %}
+                                    <form method="POST" action="{{ url_for('main.mark_notification_read', notif_id=notification.id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-link text-success p-0">
+                                            <i class="fas fa-check me-1"></i>Mark Read
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-md-end mt-3 mt-md-0">
+                        {% if not notification.read %}
+                        <span class="badge bg-primary">New</span>
+                        {% else %}
+                        <span class="badge bg-light text-muted">Read</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <div class="empty-state-icon mb-4">
+            <i class="fas fa-bell-slash fa-5x text-muted"></i>
+        </div>
+        <h3 class="text-muted">No notifications</h3>
+        <p class="text-muted">You're all caught up! New notifications will appear here when there are updates.</p>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">
+            <i class="fas fa-arrow-left me-2"></i>Return to Dashboard
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .notification-item {
+        border-radius: 12px;
+        border: 1px solid rgba(0, 63, 135, 0.08);
+        transition: all 0.3s;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .notification-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 20px rgba(0, 63, 135, 0.08);
+    }
+    .notification-item.unread {
+        border-left: 4px solid var(--saps-blue);
+        background: rgba(0, 63, 135, 0.02);
+    }
+    .notification-item.unread .card-body {
+        background: rgba(0, 63, 135, 0.03);
+    }
+    .notification-icon {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .bg-primary-gradient {
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+    }
+    .empty-state-icon {
+        color: #d1d1d1;
+    }
+    :root {
+        --saps-blue: #003f87;
+        --saps-blue-dark: #002a5c;
+    }
+    .btn-primary {
+        background: var(--saps-blue);
+        border-color: var(--saps-blue);
+    }
+    .btn-primary:hover {
+        background: var(--saps-blue-dark);
+        border-color: var(--saps-blue-dark);
+    }
+    .btn-outline-primary {
+        color: var(--saps-blue);
+        border-color: var(--saps-blue);
+    }
+    .btn-outline-primary:hover {
+        background: var(--saps-blue);
+        color: white;
+    }
+    .text-primary {
+        color: var(--saps-blue) !important;
+    }
+</style>
+{% endblock %}

@@ -344,6 +344,22 @@
         50% { opacity: 0.5; }
     }
     
+    /* Station Commander info */
+    .supervisor-info {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .supervisor-info i {
+        color: #ffd700;
+    }
+    
     /* Responsive */
     @media (max-width: 768px) {
         .welcome-section {
@@ -429,12 +445,24 @@
                             <i class="fas fa-id-badge me-2"></i>{{ current_user.badge_number }}
                         </div>
                         <div class="badge-display">
-                            <i class="fas fa-building me-2"></i>{{ current_user.station }}
+                            <i class="fas fa-building me-2"></i>{{ current_user.station_name }}
                         </div>
                         <div class="badge-display">
                             <i class="fas fa-star me-2"></i>{{ current_user.rank|title if current_user.rank else current_user.role|title }}
                         </div>
                     </div>
+                    <!-- Station Commander Info -->
+                    {% if current_user.supervisor %}
+                    <div class="supervisor-info mb-3">
+                        <i class="fas fa-user-tie"></i>
+                        <span><strong>Station Commander:</strong> {{ current_user.supervisor.full_name }} ({{ current_user.supervisor.rank }})</span>
+                    </div>
+                    {% else %}
+                    <div class="supervisor-info mb-3" style="background: rgba(255, 255, 255, 0.08);">
+                        <i class="fas fa-info-circle"></i>
+                        <span>No Station Commander assigned to your station.</span>
+                    </div>
+                    {% endif %}
                     <div class="officer-status">
                         <div class="status-indicator"></div>
                         <div>
@@ -637,7 +665,7 @@
                             <i class="fas fa-inbox"></i>
                         </div>
                         <h4 class="fw-bold text-primary mb-3">No Cases Assigned</h4>
-                        <p class="text-muted mb-4">You haven't been assigned any cases yet. Start by creating a new case or contact your supervisor.</p>
+                        <p class="text-muted mb-4">You haven't been assigned any cases yet. Start by creating a new case or contact your Station Commander.</p>
                         <a href="{{ url_for('cases.create_case') }}" class="btn btn-saps btn-lg">
                             <i class="fas fa-plus-circle me-2"></i>Create Your First Case
                         </a>

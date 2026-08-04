@@ -1,29 +1,25 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
-from src.models import Case, Suspect, CaseUpdate, Officer
-from src.forms import CaseForm, SuspectForm
+from src.models import Case, Suspect, CaseUpdate, Officer, CaseEvidence, Notification, Station
+from src.forms import CaseForm, SuspectForm, ClosureRequestForm, ApprovalForm
 from src.utils.timezone import get_current_time
-import os
 from datetime import datetime
-from werkzeug.utils import secure_filename
 import re
 import cloudinary
 import cloudinary.uploader
-from flask import current_app
+import concurrent.futures
 
 cases_bp = Blueprint('cases', __name__)
 
-# ---------- Allowed file extensions for photos ----------
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+# ---------- Allowed file extensions ----------
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx'}
 
 def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # ---------- Helper: parse DOB from ID ----------
 def parse_dob_from_id(id_number):
-    """Extract date of birth from first 6 digits of ID number (YYMMDD)."""
     if not id_number or len(id_number) < 6:
         return None
     try:
@@ -36,26 +32,40 @@ def parse_dob_from_id(id_number):
     except ValueError:
         return None
 
-# ---------- Configure Cloudinary (once) ----------
+# ---------- Configure Cloudinary ----------
 def init_cloudinary():
     cloud_name = current_app.config.get('CLOUDINARY_CLOUD_NAME')
     api_key = current_app.config.get('CLOUDINARY_API_KEY')
     api_secret = current_app.config.get('CLOUDINARY_API_SECRET')
     if cloud_name and api_key and api_secret:
-        cloudinary.config(
-            cloud_name=cloud_name,
-            api_key=api_key,
-            api_secret=api_secret
-        )
+        cloudinary.config(cloud_name=cloud_name, api_key=api_key, api_secret=api_secret)
         return True
     return False
 
+# ---------- Parallel upload helper ----------
+def upload_file(file_obj, folder, public_id=None, resource_type='auto', overwrite=False):
+    """
+    Upload a single file to Cloudinary.
+    Returns the secure URL or raises an exception.
+    """
+    if not file_obj or file_obj.filename == '':
+        return None
+    options = {
+        'folder': folder,
+        'resource_type': resource_type,
+        'overwrite': overwrite,
+    }
+    if public_id:
+        options['public_id'] = public_id
+    result = cloudinary.uploader.upload(file_obj, **options)
+    return result.get('secure_url')
+
+
+# ---------- List cases ----------
 @cases_bp.route('/cases')
 @login_required
 def view_cases():
-    """View all cases based on role, with filters and search"""
     page = request.args.get('page', 1, type=int)
-
     query = Case.query.filter(Case.status != 'archived')
 
     if current_user.role not in ['admin', 'supervisor']:
@@ -99,23 +109,19 @@ def view_cases():
         'investigating': base_query.filter_by(status='investigating').count(),
         'high_priority': base_query.filter_by(severity='high').count(),
     }
-
     return render_template('cases/index.html', cases=cases, stats=stats)
 
 
+# ---------- Create case ----------
 @cases_bp.route('/cases/create', methods=['GET', 'POST'])
 @login_required
 def create_case():
-    """Create a new case - with suspect autofill from profile"""
-    # Initialize Cloudinary (do it once per request or globally)
     init_cloudinary()
-
     case_form = CaseForm()
     suspect_form = SuspectForm()
 
     prefill_suspect = None
     suspect_id = request.args.get('suspect_id', type=int)
-
     if suspect_id:
         prefill_suspect = Suspect.query.get(suspect_id)
         if prefill_suspect:
@@ -130,9 +136,8 @@ def create_case():
     now = get_current_time()
 
     if request.method == 'POST':
-        # ---------- 1. Extract and validate common fields ----------
+        # Extract fields
         use_existing_suspect_id = request.form.get('use_existing_suspect', '').strip()
-
         id_number = request.form.get('id_number', '').strip()
         if not id_number or not re.match(r'^\d{13}$', id_number):
             flash('ID number must be exactly 13 digits.', 'danger')
@@ -169,25 +174,48 @@ def create_case():
             flash('Invalid category selected.', 'danger')
             return redirect(url_for('cases.create_case'))
 
-        # ---------- 2. Validate the main case form ----------
         if not case_form.validate_on_submit():
             flash('Please correct the errors in the case form.', 'danger')
-            return render_template('cases/create.html',
-                                   case_form=case_form,
-                                   suspect_form=suspect_form,
-                                   prefill_suspect=prefill_suspect,
-                                   suspect_id=suspect_id,
-                                   now=now)
+            return render_template('cases/create.html', case_form=case_form, suspect_form=suspect_form,
+                                   prefill_suspect=prefill_suspect, suspect_id=suspect_id, now=now)
 
-        # ---------- 3. Handle suspect ----------
+        # ---------- Handle suspect ----------
         suspect = None
-
         if use_existing_suspect_id and use_existing_suspect_id.isdigit():
             suspect = Suspect.query.get(int(use_existing_suspect_id))
             if not suspect:
                 flash('Specified suspect not found.', 'danger')
                 return redirect(url_for('cases.create_case'))
+            # ---- Existing suspect path – create case without new uploads ----
+            case = Case(
+                title=case_form.title.data,
+                description=case_form.description.data,
+                category=category,
+                severity=case_form.severity.data,
+                location=case_form.location.data,
+                incident_date=incident_date,
+                assigned_officer_id=current_user.id,
+                station_id=current_user.station_id,
+                suspect_id=suspect.id
+            )
+            case.generate_case_number()
+            db.session.add(case)
+            db.session.flush()
+
+            update = CaseUpdate(
+                case_id=case.id,
+                officer_id=current_user.id,
+                update_type='case_created',
+                notes=f'Case created by {current_user.full_name} (existing suspect)'
+            )
+            db.session.add(update)
+            db.session.commit()
+
+            flash(f'Case {case.case_number} created successfully.', 'success')
+            return redirect(url_for('cases.view_case', case_id=case.id))
+
         else:
+            # ---- New suspect ----
             existing_suspect = Suspect.query.filter_by(id_number=id_number).first()
             if existing_suspect:
                 flash(f'A suspect with ID number {id_number} already exists. Please use the "Use Existing Suspect" option.', 'danger')
@@ -197,14 +225,9 @@ def create_case():
                 for field, errors in suspect_form.errors.items():
                     for error in errors:
                         flash(f'{field}: {error}', 'danger')
-                return render_template('cases/create.html',
-                                       case_form=case_form,
-                                       suspect_form=suspect_form,
-                                       prefill_suspect=prefill_suspect,
-                                       suspect_id=suspect_id,
-                                       now=now)
+                return render_template('cases/create.html', case_form=case_form, suspect_form=suspect_form,
+                                       prefill_suspect=prefill_suspect, suspect_id=suspect_id, now=now)
 
-            # Create new suspect
             dob = None
             if suspect_form.date_of_birth.data:
                 try:
@@ -225,93 +248,181 @@ def create_case():
                 gender=gender,
                 address=suspect_form.address.data,
                 contact_number=contact_number,
-                photo_path=None  # will be set after upload
+                photo_path=None,
+                fingerprint_path=None
             )
             db.session.add(suspect)
             db.session.flush()
 
-        # ---------- 4. Handle photo upload (only for new suspect) ----------
-        if not use_existing_suspect_id and 'photo' in request.files:
-            photo = request.files['photo']
-            if photo.filename != '':
-                if not allowed_file(photo.filename):
-                    flash('Photo must be a PNG, JPG, JPEG, or GIF file.', 'danger')
-                    return redirect(url_for('cases.create_case'))
+            # Create case (needed for evidence folder)
+            case = Case(
+                title=case_form.title.data,
+                description=case_form.description.data,
+                category=category,
+                severity=case_form.severity.data,
+                location=case_form.location.data,
+                incident_date=incident_date,
+                assigned_officer_id=current_user.id,
+                station_id=current_user.station_id,
+                suspect_id=suspect.id
+            )
+            case.generate_case_number()
+            db.session.add(case)
+            db.session.flush()
 
-                # Upload to Cloudinary
-                try:
-                    upload_result = cloudinary.uploader.upload(
-                        photo,
-                        folder="saps/suspects",        # optional folder in Cloudinary
-                        public_id=f"suspect_{suspect.id}",
-                        overwrite=True,
-                        resource_type="image"
-                    )
-                    # Get the secure URL
-                    photo_url = upload_result.get('secure_url')
-                    if photo_url:
-                        suspect.photo_path = photo_url
-                    else:
-                        flash('Failed to upload photo to Cloudinary.', 'danger')
+            # ---------- Prepare parallel upload tasks ----------
+            upload_tasks = []
+
+            # Suspect photo
+            if 'photo' in request.files:
+                photo = request.files['photo']
+                if photo.filename != '':
+                    if not allowed_file(photo.filename):
+                        flash('Photo must be a PNG, JPG, JPEG, or GIF file.', 'danger')
                         return redirect(url_for('cases.create_case'))
-                except Exception as e:
-                    flash(f'Cloudinary upload error: {str(e)}', 'danger')
+                    upload_tasks.append({
+                        'file': photo,
+                        'folder': 'saps/suspects',
+                        'public_id': f"suspect_{suspect.id}",
+                        'resource_type': 'image',
+                        'overwrite': True,
+                        'key': 'photo'
+                    })
+
+            # Fingerprint PDF
+            fingerprint_file = request.files.get('fingerprint')
+            if fingerprint_file and fingerprint_file.filename != '':
+                if not fingerprint_file.filename.lower().endswith('.pdf'):
+                    flash('Fingerprint file must be a PDF.', 'danger')
                     return redirect(url_for('cases.create_case'))
+                upload_tasks.append({
+                    'file': fingerprint_file,
+                    'folder': 'saps/suspects/fingerprints',
+                    'public_id': f"suspect_{suspect.id}_fingerprint",
+                    'resource_type': 'raw',
+                    'overwrite': True,
+                    'key': 'fingerprint'
+                })
 
-        # ---------- 5. Create the case ----------
-        case = Case(
-            title=case_form.title.data,
-            description=case_form.description.data,
-            category=category,
-            severity=case_form.severity.data,
-            location=case_form.location.data,
-            incident_date=incident_date,
-            assigned_officer_id=current_user.id,
-            suspect_id=suspect.id
-        )
-        case.generate_case_number()
+            # Evidence files
+            evidence_files = request.files.getlist('evidence_files')
+            for file in evidence_files:
+                if file and allowed_file(file.filename):
+                    ext = file.filename.rsplit('.', 1)[1].lower()
+                    resource_type = 'image' if ext in ['png', 'jpg', 'jpeg', 'gif'] else 'raw'
+                    upload_tasks.append({
+                        'file': file,
+                        'folder': f"saps/evidence/case_{case.id}",
+                        'public_id': None,
+                        'resource_type': resource_type,
+                        'overwrite': False,
+                        'key': 'evidence',
+                        'filename': file.filename
+                    })
+                elif file.filename != '':
+                    flash(f'File {file.filename} type not allowed. Skipped.', 'warning')
 
-        db.session.add(case)
-        db.session.flush()
+            # ---------- Execute uploads in parallel ----------
+            results = {}
+            errors = []
 
-        update = CaseUpdate(
-            case_id=case.id,
-            officer_id=current_user.id,
-            update_type='case_created',
-            notes=f'Case created by {current_user.full_name}'
-        )
-        db.session.add(update)
+            if upload_tasks:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                    future_to_index = {
+                        executor.submit(
+                            upload_file,
+                            task['file'],
+                            task['folder'],
+                            task['public_id'],
+                            task['resource_type'],
+                            task.get('overwrite', False)
+                        ): idx for idx, task in enumerate(upload_tasks)
+                    }
 
-        db.session.commit()
+                    for future in concurrent.futures.as_completed(future_to_index):
+                        idx = future_to_index[future]
+                        try:
+                            url = future.result()
+                            results[idx] = url
+                        except Exception as e:
+                            errors.append(f"Upload error for {upload_tasks[idx].get('filename', 'file')}: {str(e)}")
+                            results[idx] = None
 
-        flash(f'Case {case.case_number} created successfully!', 'success')
-        return redirect(url_for('cases.view_case', case_id=case.id))
+            if errors:
+                flash(errors[0], 'danger')
+                db.session.rollback()
+                return redirect(url_for('cases.create_case'))
 
-    return render_template('cases/create.html',
-                           case_form=case_form,
-                           suspect_form=suspect_form,
-                           prefill_suspect=prefill_suspect,
-                           suspect_id=suspect_id,
-                           now=now)
+            # Assign results
+            for idx, task in enumerate(upload_tasks):
+                url = results.get(idx)
+                if url is None:
+                    continue
+                if task['key'] == 'photo':
+                    suspect.photo_path = url
+                elif task['key'] == 'fingerprint':
+                    suspect.fingerprint_path = url
+                elif task['key'] == 'evidence':
+                    evidence = CaseEvidence(
+                        case_id=case.id,
+                        officer_id=current_user.id,
+                        file_url=url,
+                        caption='',
+                        file_type=task['resource_type']
+                    )
+                    db.session.add(evidence)
+
+            # Log updates
+            update = CaseUpdate(
+                case_id=case.id,
+                officer_id=current_user.id,
+                update_type='case_created',
+                notes=f'Case created by {current_user.full_name}'
+            )
+            db.session.add(update)
+
+            evidence_count = sum(1 for idx, task in enumerate(upload_tasks) if task['key'] == 'evidence' and results.get(idx))
+            if evidence_count:
+                evidence_update = CaseUpdate(
+                    case_id=case.id,
+                    officer_id=current_user.id,
+                    update_type='evidence_added',
+                    notes=f'{evidence_count} evidence file(s) uploaded during case creation'
+                )
+                db.session.add(evidence_update)
+
+            db.session.commit()
+            flash(f'Case {case.case_number} created successfully with {evidence_count} evidence file(s).', 'success')
+            return redirect(url_for('cases.view_case', case_id=case.id))
+
+    # GET request – show the form
+    return render_template('cases/create.html', case_form=case_form, suspect_form=suspect_form,
+                           prefill_suspect=prefill_suspect, suspect_id=suspect_id, now=now)
 
 
+# ---------- View single case ----------
 @cases_bp.route('/cases/<int:case_id>')
 @login_required
 def view_case(case_id):
-    """View a specific case"""
     case = Case.query.get_or_404(case_id)
-
     if not current_user.can_access_case(case):
         flash('You do not have permission to view this case.', 'danger')
         return redirect(url_for('main.dashboard'))
 
-    return render_template('cases/view.html', case=case)
+    closure_form = ClosureRequestForm()
+    approval_form = ApprovalForm()
+
+    can_request = case.can_request_closure(current_user) and case.status not in ['closed', 'archived', 'pending_closure']
+    can_approve = case.can_approve_closure(current_user) and case.status == 'pending_closure'
+
+    return render_template('cases/view.html', case=case, closure_form=closure_form,
+                           approval_form=approval_form, can_request=can_request, can_approve=can_approve)
 
 
+# ---------- Update case status (general) ----------
 @cases_bp.route('/cases/<int:case_id>/update-status', methods=['POST'])
 @login_required
 def update_case_status(case_id):
-    """Update case status"""
     case = Case.query.get_or_404(case_id)
 
     if not case.can_be_modified_by(current_user):
@@ -321,7 +432,8 @@ def update_case_status(case_id):
     new_status = request.form.get('status')
     notes = request.form.get('notes', '')
 
-    if new_status and new_status in ['open', 'investigating', 'in_court', 'closed', 'archived']:
+    allowed_statuses = ['open', 'investigating', 'in_court']
+    if new_status and new_status in allowed_statuses:
         update = CaseUpdate(
             case_id=case.id,
             officer_id=current_user.id,
@@ -330,34 +442,274 @@ def update_case_status(case_id):
             new_status=new_status,
             notes=notes
         )
-
         case.status = new_status
         case.updated_at = get_current_time()
-
         db.session.add(update)
         db.session.commit()
-
         flash(f'Case status updated to {new_status}.', 'success')
+    else:
+        flash('Invalid status or closure must be requested through the closure workflow.', 'danger')
 
     return redirect(url_for('cases.view_case', case_id=case_id))
 
 
+# ---------- Request Closure ----------
+@cases_bp.route('/cases/<int:case_id>/request-closure', methods=['POST'])
+@login_required
+def request_closure(case_id):
+    case = Case.query.get_or_404(case_id)
+
+    if not case.can_request_closure(current_user):
+        flash('You are not authorized to request closure for this case.', 'danger')
+        return redirect(url_for('cases.view_case', case_id=case.id))
+
+    if case.status in ['closed', 'archived', 'pending_closure']:
+        flash('This case cannot be closed.', 'warning')
+        return redirect(url_for('cases.view_case', case_id=case.id))
+
+    notes = request.form.get('notes', '')
+
+    case.status = 'pending_closure'
+    case.closure_requested_by_id = current_user.id
+    case.closure_requested_at = get_current_time()
+    case.updated_at = get_current_time()
+
+    update = CaseUpdate(
+        case_id=case.id,
+        officer_id=current_user.id,
+        update_type='closure_requested',
+        previous_status=case.status,
+        new_status='pending_closure',
+        notes=notes
+    )
+    db.session.add(update)
+
+    station = Station.query.get(case.station_id)
+    commander = Officer.query.get(station.supervisor_id) if station else None
+
+    if commander:
+        notif = Notification(
+            user_id=commander.id,
+            message=f'Closure requested for case {case.case_number} by {current_user.full_name}',
+            link=url_for('cases.view_case', case_id=case.id),
+            read=False
+        )
+        db.session.add(notif)
+
+    admins = Officer.query.filter_by(role='admin').all()
+    for admin in admins:
+        notif = Notification(
+            user_id=admin.id,
+            message=f'Closure requested for case {case.case_number} by {current_user.full_name}',
+            link=url_for('cases.view_case', case_id=case.id),
+            read=False
+        )
+        db.session.add(notif)
+
+    db.session.commit()
+    flash('Closure request submitted for station commander approval.', 'success')
+    return redirect(url_for('cases.view_case', case_id=case.id))
+
+
+# ---------- Approve Closure ----------
+@cases_bp.route('/cases/<int:case_id>/approve-closure', methods=['POST'])
+@login_required
+def approve_closure(case_id):
+    case = Case.query.get_or_404(case_id)
+
+    if not case.can_approve_closure(current_user):
+        flash('You are not authorized to approve closure for this case.', 'danger')
+        return redirect(url_for('cases.view_case', case_id=case.id))
+
+    if case.status != 'pending_closure':
+        flash('This case is not pending closure.', 'warning')
+        return redirect(url_for('cases.view_case', case_id=case.id))
+
+    form = ApprovalForm()
+    if form.validate_on_submit():
+        if form.action.data == 'approve':
+            case.status = 'closed'
+            case.closure_approved_by_id = current_user.id
+            case.closure_approved_at = get_current_time()
+            case.updated_at = get_current_time()
+
+            update = CaseUpdate(
+                case_id=case.id,
+                officer_id=current_user.id,
+                update_type='closure_approved',
+                previous_status='pending_closure',
+                new_status='closed',
+                notes=form.reason.data or 'Approved by station commander'
+            )
+            db.session.add(update)
+
+            officer = Officer.query.get(case.assigned_officer_id)
+            if officer:
+                notif = Notification(
+                    user_id=officer.id,
+                    message=f'Case {case.case_number} has been closed by {current_user.full_name}',
+                    link=url_for('cases.view_case', case_id=case.id),
+                    read=False
+                )
+                db.session.add(notif)
+
+            db.session.commit()
+            flash('Case has been closed successfully.', 'success')
+
+        elif form.action.data == 'reject':
+            if not form.reason.data:
+                flash('Please provide a reason for rejection.', 'danger')
+                return redirect(url_for('cases.view_case', case_id=case.id))
+
+            case.status = 'investigating'
+            case.closure_rejection_reason = form.reason.data
+            case.closure_rejected_at = get_current_time()
+            case.updated_at = get_current_time()
+
+            update = CaseUpdate(
+                case_id=case.id,
+                officer_id=current_user.id,
+                update_type='closure_rejected',
+                previous_status='pending_closure',
+                new_status='investigating',
+                notes=f'Rejected: {form.reason.data}'
+            )
+            db.session.add(update)
+
+            officer = Officer.query.get(case.assigned_officer_id)
+            if officer:
+                notif = Notification(
+                    user_id=officer.id,
+                    message=f'Closure request for case {case.case_number} was rejected by {current_user.full_name}. Reason: {form.reason.data}',
+                    link=url_for('cases.view_case', case_id=case.id),
+                    read=False
+                )
+                db.session.add(notif)
+
+            db.session.commit()
+            flash('Closure request rejected.', 'warning')
+
+        return redirect(url_for('cases.view_case', case_id=case.id))
+
+    flash('Invalid form submission.', 'danger')
+    return redirect(url_for('cases.view_case', case_id=case.id))
+
+
+# ---------- Pending Approvals ----------
+@cases_bp.route('/cases/pending-approvals')
+@login_required
+def pending_approvals():
+    if current_user.role not in ['admin', 'supervisor']:
+        flash('You do not have permission to view pending approvals.', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    query = Case.query.filter_by(status='pending_closure')
+
+    if current_user.role == 'supervisor':
+        station = Station.query.filter_by(supervisor_id=current_user.id).first()
+        if station:
+            query = query.filter_by(station_id=station.id)
+        else:
+            query = query.filter(False)
+
+    cases = query.order_by(Case.closure_requested_at.desc()).all()
+    return render_template('cases/pending_approvals.html', cases=cases)
+
+
+# ---------- Upload Evidence (for existing cases) ----------
+@cases_bp.route('/cases/<int:case_id>/evidence', methods=['POST'])
+@login_required
+def upload_evidence(case_id):
+    case = Case.query.get_or_404(case_id)
+
+    if not current_user.can_access_case(case):
+        flash('You do not have permission to add evidence to this case.', 'danger')
+        return redirect(url_for('cases.view_case', case_id=case.id))
+
+    if case.status in ['closed', 'archived']:
+        flash('Cannot add evidence to a closed/archived case.', 'warning')
+        return redirect(url_for('cases.view_case', case_id=case.id))
+
+    init_cloudinary()
+
+    files = request.files.getlist('evidence_files')
+    if not files or files[0].filename == '':
+        flash('No files selected.', 'warning')
+        return redirect(url_for('cases.view_case', case_id=case.id))
+
+    upload_tasks = []
+    for file in files:
+        if file and allowed_file(file.filename):
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            resource_type = 'image' if ext in ['png', 'jpg', 'jpeg', 'gif'] else 'raw'
+            upload_tasks.append({
+                'file': file,
+                'folder': f"saps/evidence/case_{case.id}",
+                'public_id': None,
+                'resource_type': resource_type,
+                'overwrite': False,
+                'filename': file.filename
+            })
+        elif file.filename != '':
+            flash(f'File {file.filename} type not allowed.', 'danger')
+
+    if not upload_tasks:
+        flash('No valid files to upload.', 'warning')
+        return redirect(url_for('cases.view_case', case_id=case.id))
+
+    uploaded_count = 0
+    errors = []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_task = {executor.submit(upload_file, t['file'], t['folder'], t['public_id'], t['resource_type'], t.get('overwrite', False)): t for t in upload_tasks}
+        for future in concurrent.futures.as_completed(future_to_task):
+            task = future_to_task[future]
+            try:
+                url = future.result()
+                if url:
+                    evidence = CaseEvidence(
+                        case_id=case.id,
+                        officer_id=current_user.id,
+                        file_url=url,
+                        caption=request.form.get('caption', ''),
+                        file_type=task['resource_type']
+                    )
+                    db.session.add(evidence)
+                    uploaded_count += 1
+            except Exception as e:
+                errors.append(f"Upload error for {task.get('filename', 'file')}: {str(e)}")
+
+    if errors:
+        flash('Some files failed to upload: ' + '; '.join(errors[:3]), 'danger')
+
+    if uploaded_count:
+        update = CaseUpdate(
+            case_id=case.id,
+            officer_id=current_user.id,
+            update_type='evidence_added',
+            notes=f'{uploaded_count} evidence file(s) uploaded by {current_user.full_name}'
+        )
+        db.session.add(update)
+        db.session.commit()
+        flash(f'{uploaded_count} evidence file(s) uploaded successfully.', 'success')
+    else:
+        flash('No files were uploaded successfully.', 'warning')
+
+    return redirect(url_for('cases.view_case', case_id=case.id))
+
+
+# ---------- API endpoints ----------
 @cases_bp.route('/api/check-suspect', methods=['POST'])
 @login_required
 def check_suspect():
-    """Check if suspect already exists by ID number and return full details"""
     try:
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No data provided'}), 400
-
         id_number = data.get('id_number')
         if not id_number:
             return jsonify({'error': 'ID number is required'}), 400
-
-        id_number = id_number.strip()
-        suspect = Suspect.query.filter_by(id_number=id_number).first()
-
+        suspect = Suspect.query.filter_by(id_number=id_number.strip()).first()
         if suspect:
             return jsonify({
                 'exists': True,
@@ -372,26 +724,20 @@ def check_suspect():
                     'address': suspect.address,
                     'contact_number': suspect.contact_number,
                     'photo_path': suspect.photo_path,
+                    'fingerprint_path': suspect.fingerprint_path,
                     'active_cases': suspect.active_cases
                 }
             })
-
         return jsonify({'exists': False})
-
     except Exception as e:
-        print(f"Error checking suspect: {str(e)}")
         return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
 
 
 @cases_bp.route('/api/get-suspect/<int:suspect_id>', methods=['GET'])
 @login_required
 def get_suspect(suspect_id):
-    """Get suspect details by ID"""
     try:
-        suspect = Suspect.query.get(suspect_id)
-        if not suspect:
-            return jsonify({'error': 'Suspect not found'}), 404
-
+        suspect = Suspect.query.get_or_404(suspect_id)
         return jsonify({
             'success': True,
             'suspect': {
@@ -405,10 +751,9 @@ def get_suspect(suspect_id):
                 'address': suspect.address,
                 'contact_number': suspect.contact_number,
                 'photo_path': suspect.photo_path,
+                'fingerprint_path': suspect.fingerprint_path,
                 'active_cases': suspect.active_cases
             }
         })
-
     except Exception as e:
-        print(f"Error getting suspect: {str(e)}")
         return jsonify({'error': 'Internal server error', 'details': str(e)}), 500

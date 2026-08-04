@@ -96,24 +96,24 @@
                                             <small class="form-text text-muted mt-1 d-block">Surname</small>
                                         </div>
                                     </div>
-                                    <!-- ID Number -->
+                                    <!-- Employee Number (exactly 6 digits) -->
                                     <div class="col-12">
                                         <div class="form-group floating-form">
                                             <div class="input-group">
                                                 <span class="input-group-text bg-blue-light text-primary border-end-0">
                                                     <i class="fas fa-id-card"></i>
                                                 </span>
-                                                {{ form.id_number(class="form-control floating-input" + (" is-invalid" if form.id_number.errors else ""), 
-                                                   placeholder=" ", id="id_number", maxlength="13") }}
-                                                <label for="id_number" class="floating-label">SA ID Number</label>
+                                                {{ form.employee_number(class="form-control floating-input" + (" is-invalid" if form.employee_number.errors else ""), 
+                                                   placeholder=" ", id="employee_number", maxlength="6") }}
+                                                <label for="employee_number" class="floating-label">Employee Number</label>
                                                 <div class="focus-border"></div>
                                             </div>
-                                            {% if form.id_number.errors %}
-                                                <div class="invalid-feedback d-block">{{ form.id_number.errors[0] }}</div>
+                                            {% if form.employee_number.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.employee_number.errors[0] }}</div>
                                             {% endif %}
                                             <small class="form-text text-muted mt-1 d-block">
-                                                13-digit SA ID number
-                                                <span class="text-primary" id="idNumberCheck"><i class="fas fa-check-circle ms-2"></i></span>
+                                                Exactly 6-digit SAPS employee number
+                                                <span class="text-primary" id="empNumberCheck"><i class="fas fa-check-circle ms-2"></i></span>
                                             </small>
                                         </div>
                                     </div>
@@ -163,24 +163,24 @@
                                             <small class="form-text text-muted mt-1 d-block">Current SAPS rank</small>
                                         </div>
                                     </div>
+
                                     <!-- Station -->
                                     <div class="col-md-6">
-                                        <div class="form-group floating-form">
-                                            <div class="input-group">
-                                                <span class="input-group-text bg-blue-light text-primary border-end-0">
-                                                    <i class="fas fa-building"></i>
-                                                </span>
-                                                {{ form.station(class="form-control floating-input" + (" is-invalid" if form.station.errors else ""), 
-                                                   placeholder=" ", id="station") }}
-                                                <label for="station" class="floating-label">Station</label>
-                                                <div class="focus-border"></div>
+                                        <div class="form-group">
+                                            <label class="form-label fw-semibold text-dark mb-2">
+                                                <i class="fas fa-building me-1 text-primary"></i>Station
+                                            </label>
+                                            <div class="select-wrapper">
+                                                {{ form.station(class="form-select rank-select" + (" is-invalid" if form.station.errors else "")) }}
+                                                <div class="select-arrow"><i class="fas fa-chevron-down"></i></div>
                                             </div>
                                             {% if form.station.errors %}
                                                 <div class="invalid-feedback d-block">{{ form.station.errors[0] }}</div>
                                             {% endif %}
-                                            <small class="form-text text-muted mt-1 d-block">Your police station</small>
+                                            <small class="form-text text-muted mt-1 d-block">Your assigned police station</small>
                                         </div>
                                     </div>
+
                                     <!-- Password -->
                                     <div class="col-md-6">
                                         <div class="form-group floating-form">
@@ -313,7 +313,6 @@
 </div>
 
 <style>
-    /* Custom colors */
     :root {
         --saps-blue: #003f87;
         --saps-blue-dark: #002b5c;
@@ -430,6 +429,7 @@
         position: relative;
     }
     .rank-select {
+        width: 100%;
         padding: 0.75rem 1rem;
         border: 2px solid #e0e0e0;
         border-radius: 10px;
@@ -437,10 +437,14 @@
         background: #fff;
         cursor: pointer;
         transition: all 0.3s ease;
+        font-size: 1rem;
     }
     .rank-select:focus {
         border-color: var(--saps-blue);
         box-shadow: 0 0 0 0.2rem rgba(0,63,135,0.15);
+    }
+    .rank-select.is-invalid {
+        border-color: #dc3545;
     }
     .select-arrow {
         position: absolute;
@@ -544,7 +548,6 @@
 </style>
 
 <script>
-    // Vanilla JavaScript – no jQuery dependency
     document.addEventListener('DOMContentLoaded', function() {
         console.log('Registration page loaded');
 
@@ -566,7 +569,6 @@
             const hasNumber = /\d/.test(pwd);
             const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(pwd);
 
-            // Update check icons
             if (lengthCheck) {
                 lengthCheck.parentElement.style.color = hasLength ? 'green' : 'inherit';
                 lengthCheck.className = hasLength ? 'fas fa-check-circle text-success me-1' : 'fas fa-check-circle me-1';
@@ -581,13 +583,11 @@
                 numberCheck.className = hasNumber ? 'fas fa-check-circle text-success me-1' : 'fas fa-check-circle me-1';
             }
 
-            // Calculate strength
             if (hasLength) strength += 25;
             if (hasUpper && hasLower) strength += 25;
             if (hasNumber) strength += 25;
             if (hasSpecial) strength += 25;
 
-            // Update meter and text
             strengthMeter.style.width = strength + '%';
             if (strength < 50) {
                 strengthMeter.className = 'progress-bar bg-danger rounded-pill';
@@ -606,7 +606,6 @@
 
         if (passwordInput) {
             passwordInput.addEventListener('input', updateStrength);
-            // Initial check
             updateStrength();
         }
 
@@ -632,29 +631,28 @@
 
         if (confirmInput) {
             confirmInput.addEventListener('input', updateMatch);
-            // also update when password changes
             if (passwordInput) {
                 passwordInput.addEventListener('input', updateMatch);
             }
         }
 
-        // --- ID Number Validation ---
-        const idInput = document.getElementById('id_number');
-        const idCheck = document.getElementById('idNumberCheck');
+        // --- Employee Number Validation (exactly 6 digits) ---
+        const empInput = document.getElementById('employee_number');
+        const empCheck = document.getElementById('empNumberCheck');
 
-        function updateIdCheck() {
-            const val = idInput.value;
-            if (val.length === 13 && /^\d+$/.test(val)) {
-                idCheck.innerHTML = '<i class="fas fa-check-circle text-success me-2"></i>Valid ID format';
+        function updateEmpCheck() {
+            const val = empInput.value;
+            if (val.length === 6 && /^\d+$/.test(val)) {
+                empCheck.innerHTML = '<i class="fas fa-check-circle text-success me-2"></i>Valid employee number';
             } else if (val.length > 0) {
-                idCheck.innerHTML = '<i class="fas fa-exclamation-circle text-warning me-2"></i>Must be 13 digits';
+                empCheck.innerHTML = '<i class="fas fa-exclamation-circle text-warning me-2"></i>Must be exactly 6 digits';
             } else {
-                idCheck.innerHTML = '<i class="fas fa-check-circle me-2" style="opacity:0.3"></i>';
+                empCheck.innerHTML = '<i class="fas fa-check-circle me-2" style="opacity:0.3"></i>';
             }
         }
 
-        if (idInput) {
-            idInput.addEventListener('input', updateIdCheck);
+        if (empInput) {
+            empInput.addEventListener('input', updateEmpCheck);
         }
 
         // --- Email Check ---
@@ -705,11 +703,10 @@
                 if (content) content.style.display = 'none';
                 if (loading) loading.style.display = 'inline-block';
                 btn.style.opacity = '0.8';
-                // allow form to submit
             });
         }
 
-        // --- Floating label detection (replaces jQuery .has-value) ---
+        // --- Floating label detection ---
         document.querySelectorAll('.floating-input').forEach(function(input) {
             if (input.value) {
                 input.classList.add('has-value');

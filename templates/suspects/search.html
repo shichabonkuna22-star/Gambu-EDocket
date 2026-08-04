@@ -162,10 +162,10 @@
                                         <!-- Suspect Photo -->
                                         <div class="suspect-photo-wrapper me-4 position-relative">
                                             {% if suspect.photo_path %}
-                                            <img src="{{ url_for('static', filename=suspect.photo_path) }}" 
+                                            <img src="{{ suspect.photo_path|suspect_photo }}" 
                                                  class="suspect-photo-img rounded-3" 
                                                  alt="{{ suspect.full_name }}"
-                                                 onerror="this.src='{{ url_for('static', filename='img/default_suspect.jpg') }}'">
+                                                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/default_suspect.jpg') }}'">
                                             {% else %}
                                             <div class="suspect-photo-placeholder rounded-3 d-flex align-items-center justify-content-center" 
                                                  style="width: 120px; height: 120px; background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));">

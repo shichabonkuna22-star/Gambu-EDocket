@@ -54,7 +54,7 @@
                 
                 <div class="d-flex flex-wrap gap-3 mb-4">
                     <span class="status-badge status-{{ case.status }} hover-lift">
-                        <i class="fas fa-{{ 'play-circle' if case.status == 'open' else 'search' if case.status == 'investigating' else 'balance-scale' if case.status == 'in_court' else 'check-circle' if case.status == 'closed' else 'archive' }} me-1"></i>
+                        <i class="fas fa-{{ 'play-circle' if case.status == 'open' else 'search' if case.status == 'investigating' else 'balance-scale' if case.status == 'in_court' else 'check-circle' if case.status == 'closed' else 'clock' if case.status == 'pending_closure' else 'archive' }} me-1"></i>
                         {{ case.status.replace('_', ' ')|title }}
                     </span>
                     
@@ -72,12 +72,18 @@
                     <span class="badge bg-primary-gradient hover-lift">
                         <i class="fas fa-tag me-1"></i>{{ case.category|title }}
                     </span>
+                    
+                    {% if case.status == 'pending_closure' %}
+                    <span class="badge bg-warning text-dark hover-lift animate__animated animate__pulse animate__infinite">
+                        <i class="fas fa-hourglass-half me-1"></i> Awaiting Approval
+                    </span>
+                    {% endif %}
                 </div>
             </div>
             
             <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
                 <div class="d-flex flex-column flex-lg-row gap-3 justify-content-lg-end">
-                    {% if case.can_be_modified_by(current_user) %}
+                    {% if case.can_be_modified_by(current_user) and case.status != 'pending_closure' and case.status not in ['closed', 'archived'] %}
                     <!-- ===== WRAPPED BUTTON ===== -->
                     <div class="status-action-wrapper">
                         <button class="btn btn-saps hover-scale w-100" data-bs-toggle="modal" data-bs-target="#statusModal">
@@ -141,6 +147,100 @@
                 </div>
             </div>
 
+            <!-- ===== UPDATED EVIDENCE SECTION with download buttons ===== -->
+            <div class="case-detail-card mb-4">
+                <div class="card-header-enhanced d-flex justify-content-between align-items-center">
+                    <h5>
+                        <i class="fas fa-image text-primary"></i>
+                        Evidence
+                    </h5>
+                    <span class="badge bg-primary-gradient">{{ case.evidence.count() }} items</span>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Upload Form -->
+                    {% if case.status not in ['closed', 'archived'] and (current_user.id == case.assigned_officer_id or current_user.role in ['admin', 'supervisor']) %}
+                    <form method="POST" action="{{ url_for('cases.upload_evidence', case_id=case.id) }}" enctype="multipart/form-data" class="mb-4">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-8">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-upload me-1"></i>Upload Evidence Files
+                                </label>
+                                <input type="file" name="evidence_files" class="form-control" multiple accept="image/*,.pdf,.doc,.docx" required>
+                                <div class="form-text">Images, PDFs, or documents (max 16MB per file)</div>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-saps w-100">
+                                    <i class="fas fa-cloud-upload-alt me-2"></i>Upload
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    {% endif %}
+
+                    <!-- Evidence Gallery -->
+                    {% if case.evidence.count() > 0 %}
+                    <div class="evidence-gallery">
+                        <div class="row g-3">
+                            {% for evidence in case.evidence %}
+                            <div class="col-md-4 col-sm-6">
+                                <div class="evidence-item">
+                                    {% if evidence.file_type == 'image' %}
+                                    <!-- Image -->
+                                    <a href="{{ evidence.file_url }}" target="_blank" class="d-block">
+                                        <img src="{{ evidence.file_url }}" class="img-fluid rounded-3" alt="Evidence" style="width:100%;height:180px;object-fit:cover;">
+                                    </a>
+                                    <div class="evidence-caption mt-2">
+                                        <small class="text-muted d-block">{{ evidence.caption or 'No caption' }}</small>
+                                        <small class="text-muted">
+                                            <i class="fas fa-user me-1"></i>{{ evidence.uploader.full_name }}
+                                            <span class="mx-1">•</span>
+                                            {{ evidence.uploaded_at.strftime('%d %b %Y') }}
+                                        </small>
+                                    </div>
+                                    {% else %}
+                                    <!-- Document (PDF, DOC, etc.) -->
+                                    <div class="document-thumbnail rounded-3 d-flex align-items-center justify-content-center" style="width:100%;height:180px;background:#f8f9fa;border:2px dashed #dee2e6;">
+                                        <div class="text-center">
+                                            <i class="fas fa-file-pdf fa-3x text-danger"></i>
+                                            <p class="small text-muted mt-1 mb-0">{{ evidence.file_url.split('/')[-1]|truncate(20, True) }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="evidence-caption mt-2">
+                                        <small class="text-muted d-block">{{ evidence.caption or 'No caption' }}</small>
+                                        <small class="text-muted">
+                                            <i class="fas fa-user me-1"></i>{{ evidence.uploader.full_name }}
+                                            <span class="mx-1">•</span>
+                                            {{ evidence.uploaded_at.strftime('%d %b %Y') }}
+                                        </small>
+                                        <div class="mt-2 d-flex gap-2">
+                                            <!-- View button -->
+                                            <a href="{{ evidence.file_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye me-1"></i>View
+                                            </a>
+                                            <!-- Download button – forces download via Cloudinary parameter -->
+                                            <a href="{{ evidence.file_url }}?fl_attachment=true" target="_blank" class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-download me-1"></i>Download
+                                            </a>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <div class="empty-state-icon mb-3">
+                            <i class="fas fa-camera fa-3x text-muted"></i>
+                        </div>
+                        <h5 class="text-muted">No evidence uploaded</h5>
+                        <p class="text-muted mb-0">Upload crime scene photos or documents to support this case</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
             <!-- Case History Timeline -->
             <div class="case-detail-card mb-4">
                 <div class="card-header-enhanced d-flex justify-content-between align-items-center">
@@ -165,8 +265,24 @@
                                         <span class="badge bg-warning text-dark">
                                             <i class="fas fa-exchange-alt me-1"></i>Status Changed
                                         </span>
+                                    {% elif update.update_type == 'closure_requested' %}
+                                        <span class="badge bg-info text-dark">
+                                            <i class="fas fa-hourglass-start me-1"></i>Closure Requested
+                                        </span>
+                                    {% elif update.update_type == 'closure_approved' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle me-1"></i>Closure Approved
+                                        </span>
+                                    {% elif update.update_type == 'closure_rejected' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times-circle me-1"></i>Closure Rejected
+                                        </span>
+                                    {% elif update.update_type == 'evidence_added' %}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-image me-1"></i>Evidence Added
+                                        </span>
                                     {% else %}
-                                        <span class="badge bg-info">
+                                        <span class="badge bg-secondary">
                                             <i class="fas fa-edit me-1"></i>Update
                                         </span>
                                     {% endif %}
@@ -192,6 +308,13 @@
                                 </span>
                             </div>
                             {% endif %}
+                            
+                            {% if update.update_type == 'closure_rejected' and update.notes %}
+                            <div class="alert alert-danger mt-2 mb-0 py-2">
+                                <i class="fas fa-exclamation-circle me-1"></i>
+                                <strong>Rejection Reason:</strong> {{ update.notes }}
+                            </div>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>
@@ -207,7 +330,7 @@
                 </div>
             </div>
 
-            <!-- Assigned Officer Card - with aggressive gap reduction -->
+            <!-- Assigned Officer Card -->
             <div class="case-detail-card assigned-officer-card">
                 <div class="card-header-enhanced">
                     <h5>
@@ -235,7 +358,7 @@
                             <div class="col-12">
                                 <div class="info-item">
                                     <small class="text-muted d-block">Station</small>
-                                    <strong>{{ case.assigned_officer.station }}</strong>
+                                    <strong>{{ case.assigned_officer.station_name or 'N/A' }}</strong>
                                 </div>
                             </div>
                             <div class="col-12">
@@ -332,7 +455,143 @@
             </div>
             {% endif %}
 
-            <!-- Case Metadata (without officer field) -->
+            <!-- ===== CLOSURE WORKFLOW SECTION (with Station Commander name) ===== -->
+            <div class="case-detail-card mb-4">
+                <div class="card-header-enhanced">
+                    <h5>
+                        <i class="fas fa-check-double text-primary"></i>
+                        Closure Workflow
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Show Station Commander name if available -->
+                    {% if case.station and case.station.supervisor %}
+                    <div class="alert alert-info py-2 d-flex align-items-center">
+                        <i class="fas fa-user-tie me-2"></i>
+                        <div>
+                            <strong>Station Commander:</strong> {{ case.station.supervisor.full_name }} ({{ case.station.supervisor.rank }})
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if case.status == 'pending_closure' %}
+                        <!-- Show approval form for Station Commanders/admins -->
+                        {% if can_approve %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>{{ case.closure_requested_by.full_name }}</strong> requested closure on 
+                            {{ case.closure_requested_at.strftime('%d %b %Y at %H:%M') }}
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('cases.approve_closure', case_id=case.id) }}">
+                            {{ approval_form.hidden_tag() }}
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Decision</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="action" id="action_approve" value="approve" checked>
+                                        <label class="form-check-label text-success fw-bold" for="action_approve">
+                                            <i class="fas fa-check-circle me-1"></i>Approve
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="action" id="action_reject" value="reject">
+                                        <label class="form-check-label text-danger fw-bold" for="action_reject">
+                                            <i class="fas fa-times-circle me-1"></i>Reject
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="reason" class="form-label fw-semibold">
+                                    <i class="fas fa-edit me-1"></i>Reason / Notes
+                                </label>
+                                <textarea name="reason" id="reason" class="form-control" rows="3" 
+                                    placeholder="Provide a reason for your decision (required if rejecting)"></textarea>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+                                    <div>
+                                        <small>
+                                            <strong>Digital Signature:</strong> Your approval will be digitally signed with your ID and timestamp.
+                                            This action cannot be undone.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-saps w-100">
+                                <i class="fas fa-pen me-2"></i>Sign &amp; Submit
+                            </button>
+                        </form>
+                        
+                        {% else %}
+                        <!-- Case is pending, but user is not authorized to approve -->
+                        <div class="alert alert-warning">
+                            <i class="fas fa-hourglass-half me-2"></i>
+                            This case is awaiting approval from a Station Commander.
+                        </div>
+                        <div class="info-item mb-2">
+                            <small class="text-muted d-block">Requested By</small>
+                            <strong>{{ case.closure_requested_by.full_name if case.closure_requested_by else 'Unknown' }}</strong>
+                        </div>
+                        <div class="info-item">
+                            <small class="text-muted d-block">Requested At</small>
+                            <strong>{{ case.closure_requested_at.strftime('%d %b %Y, %H:%M') if case.closure_requested_at else 'N/A' }}</strong>
+                        </div>
+                        {% endif %}
+                        
+                    {% elif case.status == 'closed' %}
+                        <!-- Case is closed - show approval details -->
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            This case was closed on {{ case.closure_approved_at.strftime('%d %b %Y at %H:%M') }}
+                        </div>
+                        <div class="info-item mb-2">
+                            <small class="text-muted d-block">Approved By</small>
+                            <strong>{{ case.closure_approved_by.full_name if case.closure_approved_by else 'Unknown' }}</strong>
+                        </div>
+                        <div class="info-item mb-2">
+                            <small class="text-muted d-block">Station</small>
+                            <strong>{{ case.assigned_officer.station_name or 'N/A' }}</strong>
+                        </div>
+                        <div class="info-item">
+                            <small class="text-muted d-block">Digital Signature</small>
+                            <strong class="text-success"><i class="fas fa-check-circle me-1"></i>Signed</strong>
+                        </div>
+                        
+                    {% elif case.status in ['archived'] %}
+                        <div class="alert alert-secondary">
+                            <i class="fas fa-archive me-2"></i>
+                            This case has been archived.
+                        </div>
+                        
+                    {% else %}
+                        <!-- Case is open/investigating - show Request Closure button -->
+                        {% if can_request %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Once investigation is complete, you can request closure for Station Commander approval.
+                        </div>
+                        
+                        <button class="btn btn-warning w-100" data-bs-toggle="modal" data-bs-target="#closureModal">
+                            <i class="fas fa-check-double me-2"></i>Request Closure
+                        </button>
+                        {% else %}
+                        <div class="alert alert-secondary">
+                            <i class="fas fa-lock me-2"></i>
+                            You are not authorized to request closure for this case.
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Case Metadata -->
             <div class="case-detail-card">
                 <div class="card-header-enhanced">
                     <h5>
@@ -395,7 +654,7 @@
 </div>
 
 <!-- Status Update Modal -->
-{% if case.can_be_modified_by(current_user) %}
+{% if case.can_be_modified_by(current_user) and case.status != 'pending_closure' and case.status not in ['closed', 'archived'] %}
 <div class="modal fade" id="statusModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content status-modal-content">
@@ -504,8 +763,69 @@
 </div>
 {% endif %}
 
+<!-- Closure Request Modal -->
+{% if can_request %}
+<div class="modal fade" id="closureModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content status-modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-double me-2"></i>
+                    Request Case Closure
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('cases.request_closure', case_id=case.id) }}">
+                <div class="modal-body p-4">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Submitting this request will notify the Station Commander for approval.
+                        {% if case.station and case.station.supervisor %}
+                        <br><strong>Station Commander:</strong> {{ case.station.supervisor.full_name }}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="closureNotes" class="form-label fw-semibold">
+                            <i class="fas fa-edit me-1"></i>
+                            Closure Notes
+                        </label>
+                        <textarea name="notes" 
+                                  id="closureNotes" 
+                                  class="form-control" 
+                                  rows="4" 
+                                  placeholder="Provide a summary of the investigation and reason for closure..."
+                                  required></textarea>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+                            <div>
+                                <small>
+                                    <strong>Important:</strong> Ensure all evidence has been uploaded and the case is fully documented.
+                                    This request requires Station Commander approval before the case can be officially closed.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-paper-plane me-2"></i>Submit Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <style>
-    /* All existing styles remain unchanged */
+    /* All existing styles remain */
     .case-header {
         background: linear-gradient(135deg, var(--saps-blue-light), #e6f0ff);
         border-radius: 20px;
@@ -646,6 +966,22 @@
         background: #28a745;
         box-shadow: 0 0 0 3px #28a745;
     }
+    .timeline-item-enhanced.closure-requested::before {
+        background: #17a2b8;
+        box-shadow: 0 0 0 3px #17a2b8;
+    }
+    .timeline-item-enhanced.closure-approved::before {
+        background: #28a745;
+        box-shadow: 0 0 0 3px #28a745;
+    }
+    .timeline-item-enhanced.closure-rejected::before {
+        background: #dc3545;
+        box-shadow: 0 0 0 3px #dc3545;
+    }
+    .timeline-item-enhanced.evidence-added::before {
+        background: #6f42c1;
+        box-shadow: 0 0 0 3px #6f42c1;
+    }
     .officer-card { text-align: center; padding: 1.5rem; }
     .officer-avatar {
         width: 100px;
@@ -757,20 +1093,20 @@
         border-left-color: var(--saps-gold);
     }
 
-    /* --- AGGRESSIVE FIX: Reduce gap in Assigned Officer card --- */
+    /* Assigned Officer card gap fix */
     .assigned-officer-card .card-header-enhanced {
-        padding: 0.5rem 1.5rem !important; /* less padding around header */
+        padding: 0.5rem 1.5rem !important;
     }
     .assigned-officer-card .card-body {
-        padding: 0.25rem 1.5rem 0.5rem !important; /* minimal top padding, slight bottom */
+        padding: 0.25rem 1.5rem 0.5rem !important;
     }
     .assigned-officer-card .officer-card {
-        padding: 0 !important; /* remove inner padding */
+        padding: 0 !important;
     }
     .assigned-officer-card .officer-avatar {
         width: 60px;
         height: 60px;
-        margin-bottom: 0.25rem; /* tiny space below avatar */
+        margin-bottom: 0.25rem;
         font-size: 1.2rem;
         border-width: 3px;
         box-shadow: 0 0 0 3px var(--saps-blue-light);
@@ -780,13 +1116,13 @@
         box-shadow: 0 0 0 3px var(--saps-blue-light), 0 4px 12px rgba(0,63,135,0.2);
     }
     .assigned-officer-card h4 {
-        margin-bottom: 0.15rem !important; /* reduce gap below name */
+        margin-bottom: 0.15rem !important;
     }
     .assigned-officer-card .officer-card .text-gold {
-        margin-bottom: 0.5rem !important; /* reduce space below rank */
+        margin-bottom: 0.5rem !important;
     }
 
-    /* ===== NEW: Wrapper for Update Status button to make it stand out ===== */
+    /* Status action wrapper */
     .status-action-wrapper {
         background: rgba(212, 175, 55, 0.12);
         border-radius: 12px;
@@ -800,7 +1136,6 @@
         box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.5);
         transform: scale(1.02);
     }
-    /* Ensure the button inside the wrapper takes full width and has proper padding */
     .status-action-wrapper .btn {
         border-radius: 10px;
         padding: 0.65rem 1.2rem;
@@ -815,6 +1150,21 @@
         background: linear-gradient(135deg, #004f9e, #003f87);
         transform: translateY(-2px);
         box-shadow: 0 8px 25px rgba(0, 63, 135, 0.3);
+    }
+
+    /* Evidence gallery */
+    .evidence-item {
+        transition: all 0.3s;
+    }
+    .evidence-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    .evidence-item a {
+        text-decoration: none;
+    }
+    .evidence-caption {
+        font-size: 0.85rem;
     }
 
     @media (max-width: 768px) {
@@ -858,6 +1208,23 @@
             document.body.innerHTML = originalContents;
             window.location.reload();
         });
+
+        // Show/hide reason field based on approval action
+        const actionRadios = document.querySelectorAll('input[name="action"]');
+        const reasonField = document.getElementById('reason');
+        if (actionRadios.length && reasonField) {
+            actionRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'reject') {
+                        reasonField.required = true;
+                        reasonField.placeholder = 'Please provide a reason for rejection (required)';
+                    } else {
+                        reasonField.required = false;
+                        reasonField.placeholder = 'Optional notes for approval';
+                    }
+                });
+            });
+        }
     });
 
     function selectStatus(status) {

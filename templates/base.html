@@ -5,8 +5,8 @@
     <meta charset="utf-8">
     <title>{% block title %}SAPS eDocket System{% endblock %}</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <meta content="Free HTML Templates" name="keywords">
-    <meta content="Free HTML Templates" name="description">
+    <meta content="SAPS eDocket System" name="keywords">
+    <meta content="SAPS eDocket System" name="description">
 
     <!-- Favicon -->
     <link href="{{ url_for('static', filename='img/favicon.ico') }}" rel="icon">
@@ -47,7 +47,7 @@
                 <div class="d-inline-flex align-items-center" style="height: 45px;">
                     <small class="me-3 text-light"><i class="fa fa-map-marker-alt me-2"></i>Johannesburg, South Africa</small>
                     <small class="me-3 text-light"><i class="fa fa-phone-alt me-2"></i>062 719 5389</small>
-                    <small class="text-light"><i class="fa fa-envelope-open me-2"></i>futuretech@academy.com</small>
+                    <small class="text-light"><i class="fa fa-envelope-open me-2"></i>saps@edocket.gov.za</small>
                 </div>
             </div>
             <div class="col-lg-4 text-center text-lg-end">
@@ -80,7 +80,32 @@
                         <a href="{{ url_for('cases.view_cases') }}" class="nav-item nav-link {% if request.endpoint.startswith('cases') and request.endpoint != 'cases.create_case' %}active{% endif %}">Cases</a>
                         <a href="{{ url_for('cases.create_case') }}" class="nav-item nav-link {% if request.endpoint == 'cases.create_case' %}active{% endif %}">New Case</a>
                         <a href="{{ url_for('suspects.search_suspects') }}" class="nav-item nav-link {% if request.endpoint == 'suspects.search_suspects' %}active{% endif %}">Find Suspects</a>
-                        <a href="{{ url_for('main.search') }}" class="nav-item nav-link {% if request.endpoint == 'main.search' %}active{% endif %}">Search</a>
+
+                                                <!-- Pending Approvals (Supervisor/Admin only) -->
+                        {% if current_user.role in ['admin', 'supervisor'] %}
+                        <a href="{{ url_for('cases.pending_approvals') }}" class="nav-item nav-link position-relative {% if request.endpoint == 'cases.pending_approvals' %}active{% endif %}">
+                            <i class="fas fa-hourglass-half me-1"></i>Pending Approvals
+                            {% if pending_count > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ pending_count }}
+                                <span class="visually-hidden">pending approvals</span>
+                            </span>
+                            {% endif %}
+                        </a>
+                        {% endif %}
+
+                        <!-- Notifications Bell -->
+                        <a href="{{ url_for('main.notifications') }}" class="nav-item nav-link position-relative {% if request.endpoint == 'main.notifications' %}active{% endif %}">
+                            <i class="fas fa-bell"></i>
+                            {% if unread_count > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger animate__animated animate__pulse animate__infinite">
+                                {{ unread_count }}
+                                <span class="visually-hidden">unread notifications</span>
+                            </span>
+                            {% endif %}
+                        </a>
+
+                        <!-- Admin Dropdown -->
                         {% if current_user.role in ['admin', 'supervisor'] %}
                             <div class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Admin</a>
@@ -96,7 +121,6 @@
                         <a href="{{ url_for('auth.register') }}" class="nav-item nav-link">Register</a>
                     {% endif %}
                 </div>
-                <button type="button" class="btn text-primary ms-3" data-bs-toggle="modal" data-bs-target="#searchModal"><i class="fa fa-search"></i></button>
                 {% if current_user.is_authenticated %}
                     <div class="nav-item dropdown">
                         <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">

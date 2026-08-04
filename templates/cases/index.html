@@ -41,7 +41,7 @@
             </div>
         </div>
         
-        <!-- Quick Stats (now using real stats from the backend) -->
+        <!-- Quick Stats -->
         <div class="quick-stats">
             <div class="quick-stat-item">
                 <div class="text-primary fw-bold display-6">{{ stats.total }}</div>
@@ -220,21 +220,13 @@
                         </div>
                     </div>
                     
-                    <!-- Action Buttons -->
+                    <!-- ===== SINGLE ACTION BUTTON: View Details ===== -->
                     <div class="case-actions">
                         <a href="{{ url_for('cases.view_case', case_id=case.id) }}" 
-                           class="case-action-btn action-primary">
-                            <i class="fas fa-eye"></i>
-                            <span class="d-none d-md-inline">View Details</span>
+                           class="case-action-btn action-primary w-100">
+                            <i class="fas fa-eye me-2"></i>
+                            View Details
                         </a>
-                        {% if case.can_be_modified_by(current_user) %}
-                        <form method="POST" action="{{ url_for('cases.update_case_status', case_id=case.id) }}" class="d-inline w-100">
-                            <button type="submit" class="case-action-btn action-secondary border-0 w-100">
-                                <i class="fas fa-edit"></i>
-                                <span class="d-none d-md-inline">Update</span>
-                            </button>
-                        </form>
-                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -527,34 +519,30 @@
         transition: width 1s ease;
     }
     .case-actions {
-        display: flex;
-        gap: 0.5rem;
         margin-top: 1.5rem;
     }
     .case-action-btn {
-        flex: 1;
-        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         padding: 0.75rem;
         border-radius: 10px;
         font-weight: 600;
         font-size: 0.9rem;
         transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        text-decoration: none;
+        border: none;
         gap: 0.5rem;
     }
     .case-action-btn:hover {
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        color: white;
+        text-decoration: none;
     }
     .action-primary {
         background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
         color: white;
-    }
-    .action-secondary {
-        background: linear-gradient(135deg, var(--saps-gold), #c9a227);
-        color: var(--saps-black);
     }
     .pagination-enhanced { margin-top: 3rem; }
     .page-item .page-link {
@@ -648,9 +636,6 @@
                 }, 500);
             });
         }
-
-        // The "Apply Filters" button still works normally.
-        // The "Reset Filters" button uses the resetFilters() function below.
     });
 
     // Reset filters: go to the cases page without any query parameters
@@ -658,7 +643,7 @@
         window.location.href = "{{ url_for('cases.view_cases') }}";
     }
 
-    // Animation for case cards on scroll (kept from original)
+    // Animation for case cards on scroll
     document.addEventListener('DOMContentLoaded', function() {
         const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -100px 0px' };
         const observer = new IntersectionObserver((entries) => {

@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Pending Approvals – SAPS eDocket{% endblock %}
+
+{% block page_header %}
+<div class="container-fluid bg-primary py-5 bg-header" style="margin-bottom: 90px;">
+    <div class="row py-5">
+        <div class="col-12 pt-lg-5 mt-lg-5 text-center">
+            <h1 class="display-4 text-white animated zoomIn">Pending Approvals</h1>
+            <a href="{{ url_for('main.index') }}" class="h5 text-white">Home</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="{{ url_for('main.dashboard') }}" class="h5 text-white">Dashboard</a>
+            <i class="far fa-circle text-white px-2"></i>
+            <a href="#" class="h5 text-white">Pending Approvals</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="fw-bold text-primary">
+                <i class="fas fa-hourglass-half me-2"></i>
+                Cases Awaiting Your Approval
+            </h2>
+            <p class="text-muted">Review case details, evidence, and provide your digital signature to approve or reject closure requests.</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <span class="badge bg-warning text-dark p-3 fs-6">
+                <i class="fas fa-clock me-2"></i>
+                {{ cases|length }} pending
+            </span>
+        </div>
+    </div>
+
+    {% if cases %}
+    <div class="row g-4">
+        {% for case in cases %}
+        <div class="col-lg-6">
+            <div class="pending-approval-card card h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <span class="badge bg-primary-gradient mb-2">
+                                <i class="fas fa-hashtag me-1"></i>{{ case.case_number }}
+                            </span>
+                            <h5 class="fw-bold text-dark mb-1">{{ case.title }}</h5>
+                        </div>
+                        <span class="badge bg-warning text-dark animate__animated animate__pulse animate__infinite">
+                            <i class="fas fa-hourglass-half me-1"></i>Pending
+                        </span>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Requested By</small>
+                            <strong>{{ case.closure_requested_by.full_name if case.closure_requested_by else 'Unknown' }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Requested At</small>
+                            <strong>{{ case.closure_requested_at.strftime('%d %b %Y, %H:%M') if case.closure_requested_at else 'N/A' }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Station</small>
+                            <strong>{{ case.station_name or 'N/A' }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Category</small>
+                            <strong>{{ case.category|title }}</strong>
+                        </div>
+                    </div>
+
+                    <!-- ===== UPDATED: Station Commander ===== -->
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Station Commander (to approve)</small>
+                        <strong>
+                            {% if case.station and case.station.supervisor %}
+                                {{ case.station.supervisor.full_name }}
+                            {% else %}
+                                <span class="text-warning">No Station Commander assigned</span>
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Description</small>
+                        <p class="text-dark mb-0 small">{{ case.description[:150] }}{% if case.description|length > 150 %}...{% endif %}</p>
+                    </div>
+
+                    {% if case.evidence.count() > 0 %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block">
+                            <i class="fas fa-image me-1"></i>Evidence ({{ case.evidence.count() }} items)
+                        </small>
+                        <div class="d-flex gap-2 flex-wrap">
+                            {% for evidence in case.evidence.limit(3) %}
+                            <a href="{{ evidence.file_url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-{{ 'image' if evidence.file_type == 'image' else 'file-pdf' }}"></i>
+                            </a>
+                            {% endfor %}
+                            {% if case.evidence.count() > 3 %}
+                            <span class="btn btn-sm btn-outline-secondary disabled">+{{ case.evidence.count() - 3 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-grid gap-2 mt-3">
+                        <a href="{{ url_for('cases.view_case', case_id=case.id) }}" class="btn btn-saps">
+                            <i class="fas fa-eye me-2"></i>Review &amp; Approve
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <div class="empty-state-icon mb-4">
+            <i class="fas fa-check-circle fa-5x text-success"></i>
+        </div>
+        <h3 class="text-muted">All caught up!</h3>
+        <p class="text-muted mb-4">There are no pending closure requests requiring your approval.</p>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">
+            <i class="fas fa-arrow-left me-2"></i>Return to Dashboard
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .pending-approval-card {
+        border-radius: 16px;
+        border: 1px solid rgba(0, 63, 135, 0.1);
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+    .pending-approval-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0, 63, 135, 0.15);
+        border-color: var(--saps-blue);
+    }
+    .pending-approval-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, var(--saps-gold), #ff9800);
+        border-radius: 16px 16px 0 0;
+    }
+    .pending-approval-card .card-body {
+        position: relative;
+        padding-top: 1.5rem;
+    }
+    .empty-state-icon {
+        color: #d1d1d1;
+    }
+    .bg-primary-gradient {
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+    }
+    :root {
+        --saps-blue: #003f87;
+        --saps-blue-dark: #002a5c;
+        --saps-gold: #D4AF37;
+    }
+    .btn-saps {
+        background: linear-gradient(135deg, var(--saps-blue), var(--saps-blue-dark));
+        color: white;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .btn-saps:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 63, 135, 0.3);
+        color: white;
+    }
+</style>
+{% endblock %}
