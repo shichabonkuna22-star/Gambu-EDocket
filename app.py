@@ -116,6 +116,10 @@ def seed_database():
             {'name': 'Bloemfontein', 'commander_email': 'KhumaloS@saps.gov.za'},
             {'name': 'Port Elizabeth', 'commander_email': 'SibiyaS@saps.gov.za'},
             {'name': 'East London', 'commander_email': 'NtshangaseT@saps.gov.za'},
+            # ----- NEW STATIONS & COMMANDERS -----
+            {'name': 'Polokwane', 'commander_email': 'TholeS@saps.gov.za'},
+            {'name': 'Kimberley', 'commander_email': 'MbuthoS@saps.gov.za'},
+            {'name': 'Nelspruit', 'commander_email': 'MalopeT@saps.gov.za'},
         ]
 
         station_objects = {}
@@ -139,10 +143,17 @@ def seed_database():
             'KhumaloS@saps.gov.za': ('S', 'Khumalo', '22233182@dut'),
             'SibiyaS@saps.gov.za': ('S', 'Sibiya', '21724659@dut'),
             'NtshangaseT@saps.gov.za': ('Thobani', 'Ntshangase', '22318985@dut'),
+            # ----- NEW COMMANDERS -----
+            'TholeS@saps.gov.za': ('Sphesihle', 'Thole', '22346497@dut'),
+            'MbuthoS@saps.gov.za': ('Syabonga', 'Mbutho', '22055757@dut'),
+            'MalopeT@saps.gov.za': ('Thembelihle', 'Malope', '22203220@dut'),
         }
 
         # Generate sequential 6-digit employee numbers
-        emp_counter = 1
+        # We need to know how many existing officers there are to continue the sequence
+        existing_count = Officer.query.count()
+        emp_counter = existing_count + 1  # start after existing
+
         for email, (first, last, password) in commander_credentials.items():
             officer = Officer.query.filter_by(email=email).first()
             station = station_objects.get(email)

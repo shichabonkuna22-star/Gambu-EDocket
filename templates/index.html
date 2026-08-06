@@ -263,95 +263,102 @@
 </div>
 <!-- Services End -->
 
-<!-- Developer Section -->
-<div class="container-fluid developer-section py-5 wow fadeInUp" data-wow-delay="0.1s">
-    <div class="container py-5">
-        <div class="section-title text-center position-relative pb-3 mb-5 mx-auto" style="max-width:700px;">
-            <h5 class="fw-bold text-primary text-uppercase">Developer</h5>
-            <h1 class="mb-0">Website Designed & Developed By</h1>
-        </div>
-        <div class="row align-items-center g-5">
-            <div class="col-lg-4 text-center">
-                <img src="{{ url_for('static', filename='img/shichabo.png') }}" class="developer-img" alt="Shichabo Nkuna" style="width:280px;height:280px;object-fit:cover;border-radius:50%;border:6px solid #06A3DA;box-shadow:0 10px 30px rgba(0,0,0,.15);">
-            </div>
-            <div class="col-lg-8">
-                <h2 class="text-primary mb-3">Shichabo Nkuna</h2>
-                <h5 class="mb-4">Software Developer</h5>
-                <p class="mb-4">
-                    Software Developer with hands‑on experience in backend development,
-                    software testing, and cloud‑based web applications using
-                    <strong>C#</strong>, <strong>ASP.NET Core MVC</strong>, <strong>Entity Framework</strong>,
-                    <strong>Python Flask</strong>, <strong>REST APIs</strong>,
-                    and database design across both <strong>SQL</strong> and <strong>NoSQL</strong> databases.
-                </p>
-                <div class="developer-links">
-                    <p class="mb-2"><i class="fas fa-envelope text-primary me-2"></i><a href="mailto:shichabonkuna22@gmail.com">shichabonkuna22@gmail.com</a></p>
-                    <p class="mb-4"><i class="fas fa-globe text-primary me-2"></i><a href="https://shichabonkuna22-star.github.io/portfolio/" target="_blank">Portfolio Website</a></p>
-                    <a href="mailto:shichabonkuna22@gmail.com" class="btn btn-primary me-3">Contact Me</a>
-                    <a href="https://shichabonkuna22-star.github.io/portfolio/" target="_blank" class="btn btn-outline-primary">View Portfolio</a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- Developer End -->
+
+
 
 <!-- Team Start -->
 <div class="container-fluid py-5 wow fadeInUp" data-wow-delay="0.1s">
     <div class="container py-5">
         <div class="section-title text-center position-relative pb-3 mb-5 mx-auto" style="max-width: 600px;">
-            <h5 class="fw-bold text-primary text-uppercase">SAPS Leadership</h5>
-            <h1 class="mb-0">Driving Justice & Safety in South Africa</h1>
+            <h5 class="fw-bold text-primary text-uppercase">Our Team</h5>
+            <h1 class="mb-0">Meet the Developers Behind SAPS eDocket</h1>
         </div>
         <div class="row g-5">
-            <div class="col-lg-4 wow slideInUp" data-wow-delay="0.3s">
+            <!-- Siyabonga Mbutho -->
+            <div class="col-lg-3 col-md-6 wow slideInUp" data-wow-delay="0.3s">
                 <div class="team-item bg-light rounded overflow-hidden">
-                    <div class="team-img position-relative overflow-hidden" style="height: 400px;">
-                        <img src="{{ url_for('static', filename='img/team-1.png') }}" alt="Prof Firoz Cachalia" style="width:100%;height:100%;object-fit:cover;object-position:top center;">
+                    <div class="team-img position-relative overflow-hidden" style="height: 350px;">
+                        <img src="{{ url_for('static', filename='img/team/Mbutho.jpeg') }}" alt="Siyabonga Mbutho" style="width:100%;height:100%;object-fit:cover;object-position:top center;">
                         <div class="team-social">
-                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="#"><i class="fab fa-twitter fw-normal"></i></a>
-                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="#"><i class="fab fa-facebook-f fw-normal"></i></a>
-                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="#"><i class="fab fa-instagram fw-normal"></i></a>
-                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="#"><i class="fab fa-linkedin-in fw-normal"></i></a>
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://github.com/mbuthosiyabonga-dev" target="_blank"><i class="fab fa-github fw-normal"></i></a>
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://linkedin.com/in/siyabonga-ernest-mbutho-12090a391" target="_blank"><i class="fab fa-linkedin-in fw-normal"></i></a>
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://www.facebook.com/share/1DtJpx6cqM/" target="_blank"><i class="fab fa-facebook-f fw-normal"></i></a>
                         </div>
                     </div>
                     <div class="text-center py-4">
-                        <h4 class="text-primary">Prof Firoz Cachalia</h4>
-                        <p class="text-uppercase m-0">Minister</p>
+                        <h4 class="text-primary">Siyabonga Mbutho</h4>
+                        <p class="text-uppercase m-0">Software Developer</p>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-4 wow slideInUp" data-wow-delay="0.6s">
+
+            <!-- Thuledu Ndlanzi -->
+            <div class="col-lg-3 col-md-6 wow slideInUp" data-wow-delay="0.6s">
                 <div class="team-item bg-light rounded overflow-hidden">
-                    <div class="team-img position-relative overflow-hidden" style="height: 400px;">
-                        <img src="{{ url_for('static', filename='img/team-2.jpg') }}" alt="Gen. Nhlanhla Mkhwanazi" style="width:100%;height:100%;object-fit:cover;object-position:top center;">
+                    <div class="team-img position-relative overflow-hidden" style="height: 350px;">
+                        <img src="{{ url_for('static', filename='img/team/Ndlanzi.jpeg') }}" alt="Thuledu Ndlanzi" style="width:100%;height:100%;object-fit:cover;object-position:top center;">
                         <div class="team-social">
-                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="#"><i class="fab fa-twitter fw-normal"></i></a>
-                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="#"><i class="fab fa-facebook-f fw-normal"></i></a>
-                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="#"><i class="fab fa-instagram fw-normal"></i></a>
-                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="#"><i class="fab fa-linkedin-in fw-normal"></i></a>
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://github.com/ndlazthule-source" target="_blank"><i class="fab fa-github fw-normal"></i></a>
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://www.linkedin.com/in/thuledu-ndlanzi-b158b6332" target="_blank"><i class="fab fa-linkedin-in fw-normal"></i></a>
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://www.instagram.com/ka_myayi" target="_blank"><i class="fab fa-instagram fw-normal"></i></a>
                         </div>
                     </div>
                     <div class="text-center py-4">
-                        <h4 class="text-primary">Gen. Nhlanhla Mkhwanazi</h4>
-                        <p class="text-uppercase m-0">Police Commissioner</p>
+                        <h4 class="text-primary">Thuledu Ndlanzi</h4>
+                        <p class="text-uppercase m-0">Business Analyst</p>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-4 wow slideInUp" data-wow-delay="0.9s">
+
+            <!-- Njabulo Gambu -->
+            <div class="col-lg-3 col-md-6 wow slideInUp" data-wow-delay="0.9s">
                 <div class="team-item bg-light rounded overflow-hidden">
-                    <div class="team-img position-relative overflow-hidden" style="height: 400px;">
-                        <img src="{{ url_for('static', filename='img/team-3.jpg') }}" alt="Bheki Cele" style="width:100%;height:100%;object-fit:cover;object-position:top center;">
+                    <div class="team-img position-relative overflow-hidden" style="height: 350px;">
+                        <img src="{{ url_for('static', filename='img/team/Njabulo.jpg') }}" alt="Njabulo Gambu" style="width:100%;height:100%;object-fit:cover;object-position:top center;">
                         <div class="team-social">
-                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="#"><i class="fab fa-twitter fw-normal"></i></a>
-                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="#"><i class="fab fa-facebook-f fw-normal"></i></a>
-                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="#"><i class="fab fa-instagram fw-normal"></i></a>
-                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="#"><i class="fab fa-linkedin-in fw-normal"></i></a>
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://share.google/c9Y4IjeQwtOwXvIBr" target="_blank"><i class="fab fa-github fw-normal"></i></a>
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://www.instagram.com/njabulo_9145" target="_blank"><i class="fab fa-instagram fw-normal"></i></a>
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://www.facebook.com/share/19H72Q43Fh/" target="_blank"><i class="fab fa-facebook-f fw-normal"></i></a>
                         </div>
                     </div>
                     <div class="text-center py-4">
-                        <h4 class="text-primary">Bheki Cele</h4>
-                        <p class="text-uppercase m-0">Former Minister</p>
+                        <h4 class="text-primary">Njabulo Gambu</h4>
+                        <p class="text-uppercase m-0">Business Analyst</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thobani Ntshangase -->
+            <div class="col-lg-3 col-md-6 wow slideInUp" data-wow-delay="1.2s">
+                <div class="team-item bg-light rounded overflow-hidden">
+                    <div class="team-img position-relative overflow-hidden" style="height: 350px;">
+                        <img src="{{ url_for('static', filename='img/team/Thobani.png') }}" alt="Thobani Ntshangase" style="width:100%;height:100%;object-fit:cover;object-position:top center;">
+                        <div class="team-social">
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://github.com/ThobaniNtshangase" target="_blank"><i class="fab fa-github fw-normal"></i></a>
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://www.facebook.com/share/1Dd3KbrWHe/" target="_blank"><i class="fab fa-facebook-f fw-normal"></i></a>
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://www.instagram.com/thoban_mgazi" target="_blank"><i class="fab fa-instagram fw-normal"></i></a>
+                        </div>
+                    </div>
+                    <div class="text-center py-4">
+                        <h4 class="text-primary">Thobani Ntshangase</h4>
+                        <p class="text-uppercase m-0">Software Tester</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== NEW: Melokuhle Buthelezi ===== -->
+            <div class="col-lg-3 col-md-6 wow slideInUp" data-wow-delay="1.5s">
+                <div class="team-item bg-light rounded overflow-hidden">
+                    <div class="team-img position-relative overflow-hidden" style="height: 350px;">
+                        <img src="{{ url_for('static', filename='img/team/Melo.jpg') }}" alt="Melokuhle Buthelezi" style="width:100%;height:100%;object-fit:cover;object-position:top center;">
+                        <div class="team-social">
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://github.com/Kwandile04" target="_blank"><i class="fab fa-github fw-normal"></i></a>
+                            <a class="btn btn-lg btn-primary btn-lg-square rounded" href="https://www.instagram.com/____melokuhle" target="_blank"><i class="fab fa-instagram fw-normal"></i></a>
+                        </div>
+                    </div>
+                    <div class="text-center py-4">
+                        <h4 class="text-primary">Melokuhle Buthelezi</h4>
+                        <p class="text-uppercase m-0">Business Analyst</p>
                     </div>
                 </div>
             </div>
@@ -359,6 +366,8 @@
     </div>
 </div>
 <!-- Team End -->
+
+
 
 <!-- Testimonial Start -->
 <div class="container-fluid py-5 wow fadeInUp" data-wow-delay="0.1s">
