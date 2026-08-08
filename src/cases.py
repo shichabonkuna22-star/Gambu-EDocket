@@ -757,3 +757,198 @@ def get_suspect(suspect_id):
         })
     except Exception as e:
         return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
+    
+    
+# ==================== ADD THIS BLOCK AT THE END OF YOUR EXISTING cases.py ====================
+# ---------- NEW: Offline Sync API Endpoints ----------
+@cases_bp.route('/api/cases', methods=['POST'])
+@login_required
+def api_create_case():
+    """
+    JSON endpoint for offline sync to create a case.
+    Expects JSON payload with all case & suspect data.
+    Returns the real case number and ID.
+    """
+    init_cloudinary()
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+
+    # --- Extract fields (same as create_case) ---
+    id_number = data.get('id_number', '').strip()
+    first_name = data.get('first_name', '').strip()
+    last_name = data.get('last_name', '').strip()
+    title = data.get('title', '').strip()
+    description = data.get('description', '').strip()
+    category = data.get('category', '')
+    severity = data.get('severity', 'medium')
+    location = data.get('location', '')
+    gender = data.get('gender', '')
+    address = data.get('address', '')
+    contact_number = data.get('contact_number', '').strip()
+    incident_date_str = data.get('incident_date', '').strip()
+    # photo and fingerprint will be uploaded separately via /api/upload later
+
+    # --- Validations ---
+    if not id_number or not re.match(r'^\d{13}$', id_number):
+        return jsonify({'success': False, 'error': 'Invalid ID number'}), 400
+    if contact_number and not re.match(r'^\d{10}$', contact_number):
+        return jsonify({'success': False, 'error': 'Contact number must be 10 digits'}), 400
+
+    incident_date = None
+    if incident_date_str:
+        try:
+            incident_date = datetime.fromisoformat(incident_date_str)
+        except:
+            return jsonify({'success': False, 'error': 'Invalid incident date format'}), 400
+        if incident_date > get_current_time():
+            return jsonify({'success': False, 'error': 'Incident date cannot be in future'}), 400
+
+    if gender not in ['male', 'female']:
+        return jsonify({'success': False, 'error': 'Gender must be male/female'}), 400
+
+    # --- Handle Suspect (create or reuse) ---
+    suspect = Suspect.query.filter_by(id_number=id_number).first()
+    if not suspect:
+        # Parse DOB from ID if not provided
+        dob = data.get('date_of_birth')
+        if dob:
+            try:
+                dob = datetime.strptime(dob, '%Y-%m-%d').date()
+            except:
+                dob = parse_dob_from_id(id_number)
+        else:
+            dob = parse_dob_from_id(id_number)
+
+        suspect = Suspect(
+            id_number=id_number,
+            first_name=first_name,
+            last_name=last_name,
+            date_of_birth=dob,
+            gender=gender,
+            address=address,
+            contact_number=contact_number,
+            photo_path=None,
+            fingerprint_path=None
+        )
+        db.session.add(suspect)
+        db.session.flush()
+
+    # --- Create Case ---
+    case = Case(
+        title=title,
+        description=description,
+        category=category,
+        severity=severity,
+        location=location,
+        incident_date=incident_date,
+        assigned_officer_id=current_user.id,
+        station_id=current_user.station_id,
+        suspect_id=suspect.id
+    )
+    case.generate_case_number()
+    db.session.add(case)
+    db.session.flush()
+
+    # Log update
+    update = CaseUpdate(
+        case_id=case.id,
+        officer_id=current_user.id,
+        update_type='case_created',
+        notes=f'Case created via offline sync by {current_user.full_name}'
+    )
+    db.session.add(update)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'case_id': case.id,
+        'case_number': case.case_number,
+        'suspect_id': suspect.id
+    })
+
+
+@cases_bp.route('/api/upload', methods=['POST'])
+@login_required
+def api_upload_file():
+    """
+    Upload a file (photo, fingerprint, evidence) to Cloudinary.
+    Expects form-data with 'file', 'type' (photo/fingerprint/evidence), and optional 'case_id' and 'suspect_id'.
+    Returns the secure URL.
+    """
+    init_cloudinary()
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        return jsonify({'success': False, 'error': 'No file provided'}), 400
+
+    file_type = request.form.get('type', 'evidence')
+    case_id = request.form.get('case_id')
+    suspect_id = request.form.get('suspect_id')
+
+    # Determine folder and resource type
+    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+    resource_type = 'image' if ext in ['png', 'jpg', 'jpeg', 'gif'] else 'raw'
+
+    if file_type == 'photo':
+        folder = 'saps/suspects'
+        public_id = f"suspect_{suspect_id}" if suspect_id else None
+        overwrite = True
+    elif file_type == 'fingerprint':
+        folder = 'saps/suspects/fingerprints'
+        public_id = f"suspect_{suspect_id}_fingerprint" if suspect_id else None
+        overwrite = True
+    else:  # evidence
+        folder = f"saps/evidence/case_{case_id}" if case_id else 'saps/evidence'
+        public_id = None
+        overwrite = False
+
+    try:
+        url = upload_file(file, folder, public_id, resource_type, overwrite)
+        if url:
+            # If evidence, we might want to create CaseEvidence record here
+            if file_type == 'evidence' and case_id:
+                evidence = CaseEvidence(
+                    case_id=int(case_id),
+                    officer_id=current_user.id,
+                    file_url=url,
+                    caption=request.form.get('caption', ''),
+                    file_type=resource_type
+                )
+                db.session.add(evidence)
+                db.session.commit()
+            return jsonify({'success': True, 'url': url})
+        else:
+            return jsonify({'success': False, 'error': 'Upload failed'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@cases_bp.route('/api/sync', methods=['POST'])
+@login_required
+def api_sync():
+    """
+    Bulk sync endpoint.
+    Expects a JSON array of operations: { 'method': 'POST', 'endpoint': '/api/cases', 'payload': {...} }
+    Processes each and returns results.
+    """
+    data = request.get_json()
+    if not data or not isinstance(data, list):
+        return jsonify({'success': False, 'error': 'Expected array of operations'}), 400
+
+    results = []
+    for op in data:
+        method = op.get('method', 'POST')
+        endpoint = op.get('endpoint')
+        payload = op.get('payload', {})
+        if endpoint == '/api/cases':
+            # Forward to our create endpoint
+            with current_app.test_request_context(json=payload):
+                resp = api_create_case()
+                results.append({
+                    'endpoint': endpoint,
+                    'status': resp.status_code,
+                    'data': resp.get_json() if resp.is_json else None
+                })
+        else:
+            results.append({'endpoint': endpoint, 'error': 'Unknown endpoint'})
+    return jsonify({'results': results})

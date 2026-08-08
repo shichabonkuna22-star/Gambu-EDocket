@@ -22,7 +22,13 @@
     <div class="row">
         <div class="col-12">
             <h2 class="mb-4"><i class="fas fa-folder-plus me-2"></i>Create New Case</h2>
-            
+
+            <!-- Offline Status Banner -->
+            <div id="offlineBanner" class="alert alert-warning d-none">
+                <i class="fas fa-wifi-slash me-2"></i>
+                <strong>You are offline.</strong> This case will be saved locally and synced automatically when you reconnect.
+            </div>
+
             <!-- Progress Steps -->
             <div class="step-indicator mb-4">
                 <div class="step active" data-step="1">
@@ -39,13 +45,13 @@
                 </div>
             </div>
 
-            <form method="POST" action="{{ url_for('cases.create_case') }}" enctype="multipart/form-data" id="caseForm">
+            <form method="POST" id="caseForm" enctype="multipart/form-data">
                 {{ case_form.hidden_tag() }}
                 {{ suspect_form.hidden_tag() }}
-                
+
                 <!-- Hidden field for existing suspect -->
                 <input type="hidden" id="useExistingSuspect" name="use_existing_suspect" value="{{ prefill_suspect.id if prefill_suspect else '' }}">
-                
+
                 <!-- Section 1: Suspect Information -->
                 <div class="card form-section mb-4">
                     <div class="card-header bg-primary text-white">
@@ -71,18 +77,18 @@
                                 <label for="idNumber" class="form-label">ID Number</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-id-card"></i></span>
-                                    <input type="text" 
-                                           class="form-control" 
-                                           id="idNumber" 
-                                           name="id_number" 
-                                           maxlength="13" 
+                                    <input type="text"
+                                           class="form-control"
+                                           id="idNumber"
+                                           name="id_number"
+                                           maxlength="13"
                                            placeholder="Enter 13-digit ID number"
                                            value="{{ suspect_form.id_number.data or '' }}"
                                            {% if prefill_suspect %}readonly{% endif %}>
                                 </div>
                                 <small class="text-muted">First 6 digits = YYMMDD (auto‑fills DOB)</small>
                             </div>
-                            
+
                             <!-- Status/Warning Message -->
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Status</label>
@@ -92,24 +98,24 @@
                                         <div>
                                             <strong>Check for Existing Records</strong>
                                             <p class="mb-0 small text-muted">
-                                                To verify if this suspect has pending cases or criminal history, 
-                                                enter the ID number above or search by name in 
+                                                To verify if this suspect has pending cases or criminal history,
+                                                enter the ID number above or search by name in
                                                 <a href="{{ url_for('suspects.search_suspects') }}">Suspect Database</a>.
                                             </p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div> 
+                        </div>
 
                         <!-- Suspect Name Fields -->
                         <div class="row suspect-fields">
                             <div class="col-md-6 mb-3">
                                 <label for="suspectFirstName" class="form-label">First Name</label>
-                                <input type="text" 
-                                       class="form-control" 
-                                       id="suspectFirstName" 
-                                       name="first_name" 
+                                <input type="text"
+                                       class="form-control"
+                                       id="suspectFirstName"
+                                       name="first_name"
                                        value="{{ suspect_form.first_name.data or '' }}"
                                        required
                                        {% if prefill_suspect %}readonly{% endif %}>
@@ -117,10 +123,10 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="suspectLastName" class="form-label">Last Name</label>
-                                <input type="text" 
-                                       class="form-control" 
-                                       id="suspectLastName" 
-                                       name="last_name" 
+                                <input type="text"
+                                       class="form-control"
+                                       id="suspectLastName"
+                                       name="last_name"
                                        value="{{ suspect_form.last_name.data or '' }}"
                                        required
                                        {% if prefill_suspect %}readonly{% endif %}>
@@ -131,10 +137,10 @@
                         <div class="row suspect-fields">
                             <div class="col-md-6 mb-3">
                                 <label for="dateOfBirth" class="form-label">Date of Birth</label>
-                                <input type="date" 
-                                       class="form-control" 
-                                       id="dateOfBirth" 
-                                       name="date_of_birth" 
+                                <input type="date"
+                                       class="form-control"
+                                       id="dateOfBirth"
+                                       name="date_of_birth"
                                        value="{{ suspect_form.date_of_birth.data or '' }}"
                                        {% if prefill_suspect %}readonly{% endif %}>
                             </div>
@@ -151,18 +157,18 @@
                         <div class="row suspect-fields">
                             <div class="col-md-6 mb-3">
                                 <label for="address" class="form-label">Address</label>
-                                <textarea class="form-control" 
-                                          id="address" 
-                                          name="address" 
+                                <textarea class="form-control"
+                                          id="address"
+                                          name="address"
                                           rows="2"
                                           {% if prefill_suspect %}readonly{% endif %}>{{ suspect_form.address.data or '' }}</textarea>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="contactNumber" class="form-label">Contact Number</label>
-                                <input type="tel" 
-                                       class="form-control" 
-                                       id="contactNumber" 
-                                       name="contact_number" 
+                                <input type="tel"
+                                       class="form-control"
+                                       id="contactNumber"
+                                       name="contact_number"
                                        value="{{ suspect_form.contact_number.data or '' }}"
                                        maxlength="10"
                                        pattern="[0-9]*"
@@ -172,21 +178,21 @@
                             </div>
                         </div>
 
-                        <!-- ===== UPDATED: Photo + Fingerprint Upload (only for new suspects) ===== -->
+                        <!-- Photo + Fingerprint Upload (only for new suspects) -->
                         {% if not prefill_suspect %}
                         <div class="row mt-3" id="uploadSection">
                             <!-- Photo Upload -->
                             <div class="col-md-6">
                                 <label class="form-label">Suspect Photo</label>
-                                <div class="upload-area border rounded p-4 text-center" 
+                                <div class="upload-area border rounded p-4 text-center"
                                      style="border-style: dashed; cursor: pointer;">
                                     <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
                                     <p class="mb-1">Drag & drop photo here or click to browse</p>
                                     <small class="text-muted">Supports: JPG, PNG | Max: 5MB</small>
-                                    <input type="file" 
-                                           id="photoInput" 
-                                           name="photo" 
-                                           accept="image/*" 
+                                    <input type="file"
+                                           id="photoInput"
+                                           name="photo"
+                                           accept="image/*"
                                            style="display: none;">
                                 </div>
                                 <div id="photoPreview" class="mt-3 text-center" style="display: none;">
@@ -197,18 +203,18 @@
                                 </div>
                             </div>
 
-                            <!-- ===== NEW: Fingerprint PDF Upload ===== -->
+                            <!-- Fingerprint PDF Upload -->
                             <div class="col-md-6">
                                 <label class="form-label">Fingerprint PDF</label>
-                                <div class="upload-area border rounded p-4 text-center" 
+                                <div class="upload-area border rounded p-4 text-center"
                                      style="border-style: dashed; cursor: pointer;" id="fingerprintUploadArea">
                                     <i class="fas fa-file-pdf fa-2x text-muted mb-2"></i>
                                     <p class="mb-1">Drag & drop PDF here or click to browse</p>
                                     <small class="text-muted">Supports: PDF only | Max: 10MB</small>
-                                    <input type="file" 
-                                           id="fingerprintInput" 
-                                           name="fingerprint" 
-                                           accept=".pdf" 
+                                    <input type="file"
+                                           id="fingerprintInput"
+                                           name="fingerprint"
+                                           accept=".pdf"
                                            style="display: none;">
                                 </div>
                                 <div id="fingerprintPreview" class="mt-3 text-center" style="display: none;">
@@ -235,7 +241,6 @@
                         <h5 class="mb-0"><i class="fas fa-folder-open me-2"></i>Case Details</h5>
                     </div>
                     <div class="card-body">
-                        <!-- (same as before – no changes) -->
                         <div class="row">
                             <div class="col-md-12 mb-3">
                                 <label for="title" class="form-label">Case Title *</label>
@@ -308,7 +313,7 @@
                     </div>
                 </div>
 
-                <!-- Section 3: Evidence Upload (unchanged) -->
+                <!-- Section 3: Evidence Upload -->
                 <div class="card form-section mb-4">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0"><i class="fas fa-image me-2"></i>Evidence</h5>
@@ -330,14 +335,14 @@
                 <!-- Submit Buttons -->
                 <div class="d-flex justify-content-between">
                     <a href="{{ url_for('cases.view_cases') }}" class="btn btn-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Cases</a>
-                    <button type="submit" name="create_case" class="btn btn-primary btn-lg"><i class="fas fa-save me-1"></i>Create Case</button>
+                    <button type="submit" id="submitBtn" class="btn btn-primary btn-lg"><i class="fas fa-save me-1"></i>Create Case</button>
                 </div>
             </form>
         </div>
     </div>
 
     <style>
-        /* (all styles remain the same) */
+        /* (all existing styles remain unchanged) */
         .step-indicator { display: flex; justify-content: space-between; position: relative; margin-bottom: 30px; }
         .step { flex: 1; text-align: center; position: relative; cursor: pointer; padding: 10px; }
         .step:not(:last-child)::after { content: ''; position: absolute; top: 25px; left: 50%; width: 100%; height: 2px; background: #dee2e6; z-index: -1; }
@@ -379,7 +384,7 @@
 
     <script>
         // ============================================================
-        // 1. ID Number -> Date of Birth Auto-fill (unchanged)
+        // 1. ID Number -> Date of Birth Auto-fill
         // ============================================================
         const idInput = document.getElementById('idNumber');
         const dobInput = document.getElementById('dateOfBirth');
@@ -430,7 +435,7 @@
         });
 
         // ============================================================
-        // 2. Category -> Severity Auto-fill (unchanged)
+        // 2. Category -> Severity Auto-fill
         // ============================================================
         const categorySelect = document.getElementById('category');
         const severitySelect = document.getElementById('severity');
@@ -463,7 +468,7 @@
         });
 
         // ============================================================
-        // 3. Incident Date – Max = Today (unchanged)
+        // 3. Incident Date – Max = Today
         // ============================================================
         const incidentDateInput = document.getElementById('incident_date');
         if (incidentDateInput) {
@@ -478,7 +483,7 @@
         }
 
         // ============================================================
-        // 4. Phone Number – Only Digits, max 10 (unchanged)
+        // 4. Phone Number – Only Digits, max 10
         // ============================================================
         const phoneInput = document.getElementById('contactNumber');
         phoneInput.addEventListener('input', function(e) {
@@ -486,7 +491,7 @@
         });
 
         // ============================================================
-        // 5. Existing Suspect Logic (unchanged)
+        // 5. Existing Suspect Logic
         // ============================================================
         let foundSuspect = null;
         let isUsingExistingSuspect = {{ 'true' if prefill_suspect else 'false' }};
@@ -680,7 +685,7 @@
         }
 
         // ============================================================
-        // 6. Evidence Upload – Drag & Drop and Preview (unchanged)
+        // 6. Evidence Upload – Drag & Drop and Preview
         // ============================================================
         const evidenceInput = document.getElementById('evidenceInput');
         const evidenceUploadArea = document.getElementById('evidenceUploadArea');
@@ -754,116 +759,83 @@
         }
 
         // ============================================================
-        // 7. DOM Ready – attach event listeners and handle prefill
+        // 7. OFFLINE-FIRST FORM SUBMISSION (NEW)
         // ============================================================
         document.addEventListener('DOMContentLoaded', function() {
-            const checkBtn = document.getElementById('checkBtn');
-            if (checkBtn) checkBtn.addEventListener('click', checkSuspect);
+            const form = document.getElementById('caseForm');
+            const submitBtn = document.getElementById('submitBtn');
 
-            const uploadArea = document.querySelector('.upload-area');
-            const photoInput = document.getElementById('photoInput');
-            if (uploadArea && photoInput) {
-                uploadArea.addEventListener('click', () => photoInput.click());
-                uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
-                uploadArea.addEventListener('dragleave', () => { uploadArea.classList.remove('dragover'); });
-                uploadArea.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.remove('dragover');
-                    if (e.dataTransfer.files.length) {
-                        photoInput.files = e.dataTransfer.files;
-                        handlePhotoUpload(e.dataTransfer.files[0]);
-                    }
-                });
-                photoInput.addEventListener('change', function(e) {
-                    if (e.target.files.length) handlePhotoUpload(e.target.files[0]);
-                });
+            // Show offline banner if offline
+            if (!navigator.onLine) {
+                document.getElementById('offlineBanner').classList.remove('d-none');
             }
 
-            function handlePhotoUpload(file) {
-                if (!file.type.match('image.*')) { showToast('Please upload an image file (JPG, PNG)', 'warning'); return; }
-                if (file.size > 5 * 1024 * 1024) { showToast('File size must be less than 5MB', 'warning'); return; }
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('previewImage').src = e.target.result;
-                    document.getElementById('photoPreview').style.display = 'block';
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault(); // Always prevent default – we handle it
+
+                // Collect form data
+                const formData = new FormData(form);
+                const caseData = {
+                    id_number: formData.get('id_number'),
+                    first_name: formData.get('first_name'),
+                    last_name: formData.get('last_name'),
+                    date_of_birth: formData.get('date_of_birth'),
+                    gender: formData.get('gender'),
+                    address: formData.get('address'),
+                    contact_number: formData.get('contact_number'),
+                    title: formData.get('title'),
+                    category: formData.get('category'),
+                    severity: formData.get('severity'),
+                    location: formData.get('location'),
+                    incident_date: formData.get('incident_date'),
+                    description: formData.get('description')
                 };
-                reader.readAsDataURL(file);
-                showToast('Photo uploaded successfully', 'success');
-            }
 
-            if (isUsingExistingSuspect) {
-                lockSuspectFields();
-                updateStatusIndicator('using');
-            }
-
-            document.getElementById('caseForm').addEventListener('submit', function(e) {
-                let isValid = true;
-
-                const idNumber = document.getElementById('idNumber').value.trim();
-                if (!idNumber || idNumber.length !== 13) {
-                    e.preventDefault();
-                    showToast('Please enter a valid 13-digit ID number', 'danger');
-                    document.getElementById('idNumber').focus();
-                    return false;
+                // Validate required fields
+                if (!caseData.id_number || caseData.id_number.length !== 13) {
+                    showToast('Please enter a valid 13-digit ID number.', 'danger');
+                    return;
+                }
+                if (!caseData.first_name || !caseData.last_name) {
+                    showToast('Please enter suspect first and last name.', 'danger');
+                    return;
+                }
+                if (!caseData.title || !caseData.category || !caseData.severity || !caseData.description) {
+                    showToast('Please fill in all required case fields.', 'danger');
+                    return;
                 }
 
-                const phone = document.getElementById('contactNumber').value.trim();
-                if (phone && !/^\d{10}$/.test(phone)) {
-                    isValid = false;
-                    document.getElementById('contactNumber').classList.add('is-invalid');
-                    showToast('Contact number must be exactly 10 digits.', 'danger');
+                // Collect files
+                const photoFile = document.getElementById('photoInput').files[0];
+                const fingerprintFile = document.getElementById('fingerprintInput').files[0];
+                const evidenceFiles = selectedFiles;
+
+                // Disable button
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+
+                try {
+                    // Save offline (works even if offline)
+                    await window.saveCaseOffline(caseData, {
+                        photo: photoFile,
+                        fingerprint: fingerprintFile,
+                        evidence: evidenceFiles
+                    });
+
+                    // If we are online, sync will happen automatically via the background process
+                    showToast('Case saved successfully! It will sync when online.', 'success');
+
+                    // Redirect to cases list after short delay
+                    setTimeout(() => {
+                        window.location.href = "{{ url_for('cases.view_cases') }}";
+                    }, 1500);
+
+                } catch (error) {
+                    console.error('Save error:', error);
+                    showToast('Error saving case. Please try again.', 'danger');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save me-1"></i>Create Case';
                 }
-
-                const requiredFields = [
-                    {id: 'suspectFirstName', name: 'First Name'},
-                    {id: 'suspectLastName', name: 'Last Name'},
-                    {id: 'title', name: 'Case Title'},
-                    {id: 'category', name: 'Category'},
-                    {id: 'severity', name: 'Severity'},
-                    {id: 'description', name: 'Description'}
-                ];
-                for (const field of requiredFields) {
-                    const element = document.getElementById(field.id);
-                    if (element && !element.value.trim()) {
-                        isValid = false;
-                        element.classList.add('is-invalid');
-                        showToast(`Please fill in the ${field.name} field`, 'warning');
-                        element.focus();
-                        break;
-                    } else if (element) element.classList.remove('is-invalid');
-                }
-
-                const incidentDate = document.getElementById('incident_date').value;
-                if (incidentDate) {
-                    const selectedDate = new Date(incidentDate);
-                    const now = new Date();
-                    if (selectedDate > now) {
-                        isValid = false;
-                        document.getElementById('incident_date').classList.add('is-invalid');
-                        showToast('Incident date cannot be in the future.', 'danger');
-                    }
-                }
-
-                if (!isValid) {
-                    e.preventDefault();
-                    return false;
-                }
-
-                const submitBtn = this.querySelector('button[name="create_case"]');
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creating Case...';
-                }
-
-                const disabledSelects = this.querySelectorAll('select:disabled');
-                disabledSelects.forEach(field => field.disabled = false);
-                return true;
-            });
-
-            document.querySelectorAll('#caseForm input, #caseForm textarea, #caseForm select').forEach(field => {
-                field.addEventListener('input', function() {
-                    if (this.checkValidity()) this.classList.remove('is-invalid');
-                });
             });
         });
     </script>

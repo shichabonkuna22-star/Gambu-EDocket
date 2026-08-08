@@ -8,6 +8,12 @@
     <meta content="SAPS eDocket System" name="keywords">
     <meta content="SAPS eDocket System" name="description">
 
+    <!-- PWA Meta -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#0d6efd">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
     <!-- Favicon -->
     <link href="{{ url_for('static', filename='img/favicon.ico') }}" rel="icon">
 
@@ -29,6 +35,9 @@
 
     <!-- Template Stylesheet -->
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+
+    <!-- Dexie.js for IndexedDB -->
+    <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
 
     {% block extra_css %}{% endblock %}
 </head>
@@ -81,7 +90,7 @@
                         <a href="{{ url_for('cases.create_case') }}" class="nav-item nav-link {% if request.endpoint == 'cases.create_case' %}active{% endif %}">New Case</a>
                         <a href="{{ url_for('suspects.search_suspects') }}" class="nav-item nav-link {% if request.endpoint == 'suspects.search_suspects' %}active{% endif %}">Find Suspects</a>
 
-                                                <!-- Pending Approvals (Supervisor/Admin only) -->
+                        <!-- Pending Approvals -->
                         {% if current_user.role in ['admin', 'supervisor'] %}
                         <a href="{{ url_for('cases.pending_approvals') }}" class="nav-item nav-link position-relative {% if request.endpoint == 'cases.pending_approvals' %}active{% endif %}">
                             <i class="fas fa-hourglass-half me-1"></i>Pending Approvals
@@ -136,10 +145,15 @@
                 {% else %}
                     <a href="{{ url_for('auth.login') }}" class="btn btn-primary py-2 px-4 ms-3">Login</a>
                 {% endif %}
+                <!-- Sync Status Indicator -->
+                <span id="syncStatus" class="ms-3 text-light" title="Sync Status">
+                    <i class="fas fa-sync-alt" id="syncIcon"></i>
+                    <span id="syncText" class="d-none d-md-inline">Online</span>
+                </span>
             </div>
         </nav>
 
-        <!-- Page Header (optional) -->
+        <!-- Page Header -->
         {% block page_header %}
             <!-- Default: no header; child templates can override -->
         {% endblock %}
@@ -268,8 +282,6 @@
                     <div class="d-flex align-items-center justify-content-center" style="height: 75px;">
                         <p class="mb-0">
                             &copy; <a class="text-white border-bottom" href="#">FutureTechAcademy</a>. All Rights Reserved.
-                            <!--/*** The author’s attribution link must remain intact in the template. ***/-->
-                            <!--/*** If you wish to remove this credit link, please purchase the Pro Version . ***/-->
                             Frontend Designed by <a class="text-white border-bottom" href="https://htmlcodex.com">HTML Codex</a> for Futuretech Academy.
                             <br>
                             Developed and engineered by <a class="text-white border-bottom" href="https://shichabonkuna22-star.github.io/portfolio/" target="_blank">Shichabo Nkuna</a>.
@@ -293,8 +305,18 @@
     <script src="{{ url_for('static', filename='lib/counterup/counterup.min.js') }}"></script>
     <script src="{{ url_for('static', filename='lib/owlcarousel/owl.carousel.min.js') }}"></script>
 
-    <!-- Template Javascript -->
+    <!-- Your main JavaScript (includes offline sync) -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/offline-sync.js') }}"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}")
+                .then(reg => console.log('Service Worker registered'))
+                .catch(err => console.log('SW registration failed:', err));
+        }
+    </script>
 
     {% block scripts %}{% endblock %}
 </body>
